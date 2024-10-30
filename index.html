@@ -2,9 +2,19 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>City Experiment 2024</title>
+    <title>Lark</title>
+
     <script src="lib/phaser-3.86.0.js"></script>
+
     <script src="lib/webfont-1.6.26.js"></script>
+    <script>
+      WebFont.load({
+        custom: {
+          families: [ 'Rubik' ]
+        }
+      });
+    </script>
+
     <style type="text/css">
         @font-face {
             font-family: "Rubik";
@@ -24,6 +34,7 @@
 </head>
 <body>
 
+<script src="src/game_model.js" type="module"></script>
 <script src="src/index.js" type="module"></script>
 <script src="src/util.js" type="module"></script>
 
