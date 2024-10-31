@@ -66,7 +66,8 @@ class GameplayScene extends Phaser.Scene {
     for (let x = 0; x < this.game.current_floor.size_tiles.w; x++) {
       this.cell_sprites.push([]);
       for (let y = 0; y < this.game.current_floor.size_tiles.h; y++) {
-        this.cell_sprites[x].push(this._create_sprite_for_cell(x, y, this.game.current_floor.cells[x][y].type));
+        const cell_type = this.game.current_floor.get_cell_type(x, y);
+        this.cell_sprites[x].push(this._create_sprite_for_cell(x, y, cell_type));
       }
     }
 
@@ -78,7 +79,7 @@ class GameplayScene extends Phaser.Scene {
 
   _move_player(tile_delta_x, tile_delta_y) {
     const player = this.game.current_floor.player_ref;
-    this.game.current_floor.move_actor(player, player.tile_x + tile_delta_x, player.tile_y + tile_delta_y);
+    this.game.current_floor.actor_walk(player, tile_delta_x, tile_delta_y);
     const [screen_x, screen_y] = this._tile_to_screen_coord(player.tile_x, player.tile_y);
     this.actor_sprites[player.id].setPosition(screen_x, screen_y);
   }

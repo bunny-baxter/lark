@@ -49,13 +49,30 @@ export class Floor {
     this.player_ref = actor;
   }
 
-  move_actor(actor_ref, to_x, to_y) {
+  teleport_actor(actor_ref, to_x, to_y) {
     actor_ref.tile_x = to_x;
     actor_ref.tile_y = to_y;
   }
 
+  actor_walk(actor_ref, delta_x, delta_y) {
+    const next_x = actor_ref.tile_x + delta_x;
+    const next_y = actor_ref.tile_y + delta_y;
+    const next_cell_type = this.get_cell_type(next_x, next_y);
+    if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.OUT_OF_BOUNDS) {
+      return;
+    }
+    this.teleport_actor(actor_ref, next_x, next_y);
+  }
+
   is_out_of_bounds(x, y) {
     return x < 0 || y < 0 || x >= this.size_tiles.w || y >= this.size_tiles.h;
+  }
+
+  get_cell_type(x, y) {
+    if (this.is_out_of_bounds(x, y)) {
+      return CellType.OUT_OF_BOUNDS;
+    }
+    return this.cells[x][y].type;
   }
 
   set_cell(x, y, type) {
