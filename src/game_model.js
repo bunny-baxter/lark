@@ -83,11 +83,42 @@ export class Floor {
   }
 }
 
+export const Command = Object.freeze({
+  WALK_UP: Symbol("WALK_UP"),
+  WALK_DOWN: Symbol("WALK_DOWN"),
+  WALK_LEFT: Symbol("WALK_LEFT"),
+  WALK_RIGHT: Symbol("WALK_RIGHT"),
+});
+
 export class Game {
+  turn = 0;
   current_floor = null;
 
   enter_new_floor() {
     this.current_floor = new Floor(9, 9);
     this.current_floor.create_player(1, 1);
+  }
+
+  populate_test_level() {
+    this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
+    this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
+  }
+
+  _end_player_turn() {
+    this.turn += 1;
+  }
+
+  execute_command(command) {
+    if (command === Command.WALK_UP) {
+      this.current_floor.actor_walk(this.current_floor.player_ref, 0, -1);
+    } else if (command === Command.WALK_DOWN) {
+      this.current_floor.actor_walk(this.current_floor.player_ref, 0, 1);
+    } else if (command === Command.WALK_LEFT) {
+      this.current_floor.actor_walk(this.current_floor.player_ref, -1, 0);
+    } else if (command === Command.WALK_RIGHT) {
+      this.current_floor.actor_walk(this.current_floor.player_ref, 1, 0);
+    }
+
+    this._end_player_turn();
   }
 }

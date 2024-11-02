@@ -29,6 +29,7 @@ class GameplayScene extends Phaser.Scene {
   game;
   cell_sprites;
   actor_sprites = {};
+  sprites_latest_turn = 0;
 
   preload() {
   }
@@ -61,6 +62,7 @@ class GameplayScene extends Phaser.Scene {
   _init_game() {
     this.game = new Model.Game();
     this.game.enter_new_floor();
+    this.game.populate_test_level();
 
     this.cell_sprites = [];
     for (let x = 0; x < this.game.current_floor.size_tiles.w; x++) {
@@ -77,22 +79,28 @@ class GameplayScene extends Phaser.Scene {
     }
   }
 
-  _move_player(tile_delta_x, tile_delta_y) {
-    const player = this.game.current_floor.player_ref;
-    this.game.current_floor.actor_walk(player, tile_delta_x, tile_delta_y);
-    const [screen_x, screen_y] = this._tile_to_screen_coord(player.tile_x, player.tile_y);
-    this.actor_sprites[player.id].setPosition(screen_x, screen_y);
+  _update_sprites(tile_delta_x, tile_delta_y) {
+    for (let i = 0; i < this.game.current_floor.actors.length; i++) {
+      const actor = this.game.current_floor.actors[i];
+      const [screen_x, screen_y] = this._tile_to_screen_coord(actor.tile_x, actor.tile_y);
+      this.actor_sprites[actor.id].setPosition(screen_x, screen_y);
+    }
   }
 
   on_key_down(event) {
     if (event.code === "KeyH") {
-      this._move_player(-1, 0);
+      this.game.execute_command(Model.Command.WALK_LEFT);
     } else if (event.code === "KeyJ") {
-      this._move_player(0, 1);
+      this.game.execute_command(Model.Command.WALK_DOWN);
     } else if (event.code === "KeyK") {
-      this._move_player(0, -1);
+      this.game.execute_command(Model.Command.WALK_UP);
     } else if (event.code === "KeyL") {
-      this._move_player(1, 0);
+      this.game.execute_command(Model.Command.WALK_RIGHT);
+    }
+
+    if (this.sprites_latest_turn < this.game.turn) {
+      this._update_sprites();
+      this.sprites_latest_turn = this.game.turn;
     }
   }
 
