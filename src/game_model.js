@@ -3,16 +3,30 @@ export const CellType = Object.freeze({
   EMPTY: Symbol("EMPTY"),
   FLOOR: Symbol("FLOOR"),
   DEFAULT_WALL: Symbol("DEFAULT_WALL"),
+  FLOWER_HAZARD: Symbol("FLOWER_HAZARD"),
 });
+
+export const Phase = Object.freeze({
+  IDLE: Symbol("IDLE"),
+  READY: Symbol("READY"),
+  ACTIVE: Symbol("ACTIVE"),
+});
+
+const FLOWER_HAZARD_CYCLE_LENGTH = 5;
 
 export class CellData {
   type = CellType.EMPTY;
+
+  turn_counter = 0;
+  phase = null;
 }
 
 export class Actor {
   id;
   tile_x = 0;
   tile_y = 0;
+
+  current_hp = 10;
 }
 
 export class Floor {
@@ -64,6 +78,16 @@ export class Floor {
     this.teleport_actor(actor_ref, next_x, next_y);
   }
 
+  find_actors_at(tile_x, tile_y) {
+    const result = [];
+    for (const actor of this.actors) {
+      if (actor.tile_x === tile_x && actor.tile_y === tile_y) {
+        result.push(actor);
+      }
+    }
+    return result;
+  }
+
   is_out_of_bounds(x, y) {
     return x < 0 || y < 0 || x >= this.size_tiles.w || y >= this.size_tiles.h;
   }
@@ -80,10 +104,42 @@ export class Floor {
       return;
     }
     this.cells[x][y].type = type;
+
+    if (type === CellType.FLOWER_HAZARD) {
+      this.cells[x][y].phase = Phase.IDLE;
+    }
+  }
+
+  _update_cell(x, y) {
+    const cell_data = this.cells[x][y];
+
+    if (cell_data.type === CellType.FLOWER_HAZARD) {
+      cell_data.turn_counter += 1;
+      const mod = cell_data.turn_counter % FLOWER_HAZARD_CYCLE_LENGTH;
+      if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 1) {
+        cell_data.phase = Phase.ACTIVE;
+        for (const actor of this.find_actors_at(x, y)) {
+          actor.current_hp -= 1;
+        }
+      } else if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 2) {
+        cell_data.phase = Phase.READY;
+      } else {
+        cell_data.phase = Phase.IDLE;
+      }
+    }
+  }
+
+  do_end_of_turn() {
+    for (let x = 0; x < this.size_tiles.w; x++) {
+      for (let y = 0; y < this.size_tiles.h; y++) {
+        this._update_cell(x, y);
+      }
+    }
   }
 }
 
 export const Command = Object.freeze({
+  PASS: Symbol("PASS"),
   WALK_UP: Symbol("WALK_UP"),
   WALK_DOWN: Symbol("WALK_DOWN"),
   WALK_LEFT: Symbol("WALK_LEFT"),
@@ -102,10 +158,12 @@ export class Game {
   populate_test_level() {
     this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
+    this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
   }
 
   _end_player_turn() {
     this.turn += 1;
+    this.current_floor.do_end_of_turn();
   }
 
   execute_command(command) {

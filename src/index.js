@@ -25,10 +25,19 @@ const PLACEHOLDER_SPRITE_STYLE = Object.freeze({
 const GRID_OFFSET_X = 128;
 const GRID_OFFSET_y = 64;
 
+class UiSprites {
+  health_label = null;
+
+  update(player_ref) {
+    this.health_label.setText(`HP: ${player_ref.current_hp}`);
+  }
+}
+
 class GameplayScene extends Phaser.Scene {
   game;
   cell_sprites;
   actor_sprites = {};
+  ui_sprites;
   sprites_latest_turn = 0;
 
   preload() {
@@ -44,6 +53,8 @@ class GameplayScene extends Phaser.Scene {
       test_char = ".";
     } else if (cell_type === Model.CellType.DEFAULT_WALL) {
       test_char = "#";
+    } else if (cell_type === Model.CellType.FLOWER_HAZARD) {
+      test_char = "f";
     };
     if (test_char) {
       const [screen_x, screen_y] = this._tile_to_screen_coord(tile_x, tile_y);
@@ -56,6 +67,7 @@ class GameplayScene extends Phaser.Scene {
     const [screen_x, screen_y] = this._tile_to_screen_coord(actor_ref.tile_x, actor_ref.tile_y);
     const sprite = this.add.text(screen_x, screen_y, "@", PLACEHOLDER_SPRITE_STYLE);
     sprite.setDepth(ACTOR_DEPTH);
+    sprite.setColor("#ffff00");
     return sprite;
   }
 
@@ -73,18 +85,41 @@ class GameplayScene extends Phaser.Scene {
       }
     }
 
-    for (let i = 0; i < this.game.current_floor.actors.length; i++) {
-      const actor = this.game.current_floor.actors[i];
+    for (const actor of this.game.current_floor.actors) {
       this.actor_sprites[actor.id] = this._create_sprite_for_actor(actor);
     }
+
+    this.ui_sprites = new UiSprites();
+    this.ui_sprites.health_label = this.add.text(128, 400, "HP: XX", UI_FONT_STYLE);
+    this.ui_sprites.health_label.setScrollFactor(0);
+    this.ui_sprites.health_label.setDepth(UI_DEPTH);
+    this.ui_sprites.update(this.game.current_floor.player_ref);
   }
 
   _update_sprites(tile_delta_x, tile_delta_y) {
-    for (let i = 0; i < this.game.current_floor.actors.length; i++) {
-      const actor = this.game.current_floor.actors[i];
+    for (let x = 0; x < this.game.current_floor.size_tiles.w; x++) {
+      for (let y = 0; y < this.game.current_floor.size_tiles.h; y++) {
+        const cell_data = this.game.current_floor.cells[x][y];
+        const sprite = this.cell_sprites[x][y];
+        if (cell_data.type === Model.CellType.FLOWER_HAZARD) {
+          if (cell_data.phase === Model.Phase.ACTIVE) {
+            sprite.setText("F");
+          } else if (cell_data.phase === Model.Phase.READY) {
+            sprite.setColor("#ff00ff");
+          } else { // ===IDLE
+            sprite.setColor("#ffffff");
+            sprite.setText("f");
+          }
+        }
+      }
+    }
+
+    for (const actor of this.game.current_floor.actors) {
       const [screen_x, screen_y] = this._tile_to_screen_coord(actor.tile_x, actor.tile_y);
       this.actor_sprites[actor.id].setPosition(screen_x, screen_y);
     }
+
+    this.ui_sprites.update(this.game.current_floor.player_ref);
   }
 
   on_key_down(event) {
@@ -96,6 +131,8 @@ class GameplayScene extends Phaser.Scene {
       this.game.execute_command(Model.Command.WALK_UP);
     } else if (event.code === "KeyL") {
       this.game.execute_command(Model.Command.WALK_RIGHT);
+    } else if (event.code === "Period") {
+      this.game.execute_command(Model.Command.PASS);
     }
 
     if (this.sprites_latest_turn < this.game.turn) {
