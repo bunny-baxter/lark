@@ -12,7 +12,7 @@ export const Phase = Object.freeze({
   ACTIVE: Symbol("ACTIVE"),
 });
 
-const FLOWER_HAZARD_CYCLE_LENGTH = 5;
+export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
 
 export class CellData {
   type = CellType.EMPTY;
