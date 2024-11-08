@@ -12,6 +12,24 @@ export const Phase = Object.freeze({
   ACTIVE: Symbol("ACTIVE"),
 });
 
+export const ActorBehavior = Object.freeze({
+  PLAYER_INPUT: Symbol("PLAYER_INPUT"),
+  PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
+});
+
+class ActorTemplateEntry {
+  behavior;
+
+  constructor(behavior) {
+    this.behavior = behavior;
+  }
+}
+
+export const ActorTemplate = Object.freeze({
+  PLAYER: new ActorTemplateEntry(ActorBehavior.PLAYER_INPUT),
+  HERON: new ActorTemplateEntry(ActorBehavior.PATROL_VERTICALLY),
+});
+
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
 
 export class CellData {
@@ -23,6 +41,8 @@ export class CellData {
 
 export class Actor {
   id;
+  behavior;
+  behavior_state = null;
   tile_x = 0;
   tile_y = 0;
 
@@ -53,14 +73,19 @@ export class Floor {
     }
   }
 
-  create_player(x, y) {
+  create_actor(template, x, y) {
     const actor = new Actor();
     actor.tile_x = x;
     actor.tile_y = y;
     actor.id = this.next_id;
+    actor.behavior = template.behavior;
     this.next_id += 1;
     this.actors.push(actor);
-    this.player_ref = actor;
+    return actor;
+  }
+
+  create_player(x, y) {
+    this.player_ref = this.create_actor(ActorTemplate.PLAYER, x, y);
   }
 
   teleport_actor(actor_ref, to_x, to_y) {
@@ -73,9 +98,10 @@ export class Floor {
     const next_y = actor_ref.tile_y + delta_y;
     const next_cell_type = this.get_cell_type(next_x, next_y);
     if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.OUT_OF_BOUNDS) {
-      return;
+      return false;
     }
     this.teleport_actor(actor_ref, next_x, next_y);
+    return true;
   }
 
   find_actors_at(tile_x, tile_y) {
@@ -129,7 +155,26 @@ export class Floor {
     }
   }
 
+  _do_actors_turn(actor) {
+    console.assert(actor.behavior !== ActorBehavior.PLAYER_INPUT);
+    if (actor.behavior === ActorBehavior.PATROL_VERTICALLY) {
+      if (actor.behavior_state === null) {
+        actor.behavior_state = 1;
+      }
+      const walked = this.actor_walk(actor, 0, actor.behavior_state);
+      if (!walked) {
+        actor.behavior_state *= -1;
+      }
+    }
+  }
+
   do_end_of_turn() {
+    for (const actor of this.actors) {
+      if (actor === this.player_ref) {
+        continue;
+      }
+      this._do_actors_turn(actor);
+    }
     for (let x = 0; x < this.size_tiles.w; x++) {
       for (let y = 0; y < this.size_tiles.h; y++) {
         this._update_cell(x, y);
@@ -159,6 +204,8 @@ export class Game {
     this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
+
+    this.current_floor.create_actor(ActorTemplate.HERON, 3, 1);
   }
 
   _end_player_turn() {

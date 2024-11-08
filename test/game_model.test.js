@@ -36,3 +36,13 @@ test("flower hazard does damage on cycle", () => {
   game.execute_command(Model.Command.PASS);
   expect(floor.player_ref.current_hp).toBe(hp_after_hit);
 });
+
+test("heron enemy moves vertically", () => {
+  floor.set_cell(3, 4, Model.CellType.DEFAULT_WALL);
+  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 3, 1);
+  const path = [[3, 2], [3, 3], [3, 3], [3, 2], [3, 1], [3, 1], [3, 2]];
+  for (let i = 0; i < path.length; i++) {
+    game.execute_command(Model.Command.PASS);
+    expect([heron_ref.tile_x, heron_ref.tile_y]).toEqual(path[i]);
+  }
+});

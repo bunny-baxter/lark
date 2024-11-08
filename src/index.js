@@ -64,8 +64,14 @@ class GameplayScene extends Phaser.Scene {
   }
 
   _create_sprite_for_actor(actor_ref) {
+    let test_char = null;
+    if (actor_ref.behavior === Model.ActorBehavior.PLAYER_INPUT) {
+      test_char = "@";
+    } else if (actor_ref.behavior === Model.ActorBehavior.PATROL_VERTICALLY) {
+      test_char = "v";
+    };
     const [screen_x, screen_y] = this._tile_to_screen_coord(actor_ref.tile_x, actor_ref.tile_y);
-    const sprite = this.add.text(screen_x, screen_y, "@", PLACEHOLDER_SPRITE_STYLE);
+    const sprite = this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
     sprite.setDepth(ACTOR_DEPTH);
     sprite.setColor("#ffff00");
     return sprite;
