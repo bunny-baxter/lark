@@ -1,3 +1,5 @@
+import * as Messages from './messages.js';
+
 export const CellType = Object.freeze({
   OUT_OF_BOUNDS: Symbol("OUT_OF_BOUNDS"),
   EMPTY: Symbol("EMPTY"),
@@ -18,16 +20,18 @@ export const ActorBehavior = Object.freeze({
 });
 
 class ActorTemplateEntry {
+  display_name;
   behavior;
 
-  constructor(behavior) {
+  constructor(display_name, behavior) {
+    this.display_name = display_name;
     this.behavior = behavior;
   }
 }
 
 export const ActorTemplate = Object.freeze({
-  PLAYER: new ActorTemplateEntry(ActorBehavior.PLAYER_INPUT),
-  HERON: new ActorTemplateEntry(ActorBehavior.PATROL_VERTICALLY),
+  PLAYER: new ActorTemplateEntry("Rogue", ActorBehavior.PLAYER_INPUT),
+  HERON: new ActorTemplateEntry("heron", ActorBehavior.PATROL_VERTICALLY),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -41,7 +45,7 @@ export class CellData {
 
 export class Actor {
   id;
-  behavior;
+  template;
   behavior_state = null;
   tile_x = 0;
   tile_y = 0;
@@ -50,13 +54,15 @@ export class Actor {
 }
 
 export class Floor {
+  parent_game;
   next_id = 0;
   size_tiles;
   cells;
   actors = [];
   player_ref = null;
 
-  constructor(width_tiles, height_tiles) {
+  constructor(parent_game, width_tiles, height_tiles) {
+    this.parent_game = parent_game;
     this.size_tiles = { w: width_tiles, h: height_tiles };
     this.cells = [];
     for (let x = 0; x < this.size_tiles.w; x++) {
@@ -78,7 +84,7 @@ export class Floor {
     actor.tile_x = x;
     actor.tile_y = y;
     actor.id = this.next_id;
-    actor.behavior = template.behavior;
+    actor.template = template;
     this.next_id += 1;
     this.actors.push(actor);
     return actor;
@@ -146,6 +152,7 @@ export class Floor {
         cell_data.phase = Phase.ACTIVE;
         for (const actor of this.find_actors_at(x, y)) {
           actor.current_hp -= 1;
+          this.parent_game.add_message(Messages.flower_hit(actor.template.display_name));
         }
       } else if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 2) {
         cell_data.phase = Phase.READY;
@@ -156,8 +163,8 @@ export class Floor {
   }
 
   _do_actors_turn(actor) {
-    console.assert(actor.behavior !== ActorBehavior.PLAYER_INPUT);
-    if (actor.behavior === ActorBehavior.PATROL_VERTICALLY) {
+    console.assert(actor.template.behavior !== ActorBehavior.PLAYER_INPUT);
+    if (actor.template.behavior === ActorBehavior.PATROL_VERTICALLY) {
       if (actor.behavior_state === null) {
         actor.behavior_state = 1;
       }
@@ -194,9 +201,10 @@ export const Command = Object.freeze({
 export class Game {
   turn = 0;
   current_floor = null;
+  messages = []
 
   enter_new_floor() {
-    this.current_floor = new Floor(9, 9);
+    this.current_floor = new Floor(this, 9, 9);
     this.current_floor.create_player(1, 1);
   }
 
@@ -214,6 +222,8 @@ export class Game {
   }
 
   execute_command(command) {
+    this.messages = [];
+
     if (command === Command.WALK_UP) {
       this.current_floor.actor_walk(this.current_floor.player_ref, 0, -1);
     } else if (command === Command.WALK_DOWN) {
@@ -225,5 +235,13 @@ export class Game {
     }
 
     this._end_player_turn();
+  }
+
+  add_message(message) {
+    this.messages.push(message);
+  }
+
+  get_messages() {
+    return this.messages;
   }
 }

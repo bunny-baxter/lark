@@ -14,6 +14,7 @@ const UI_FONT_STYLE = Object.freeze({
   fontSize: '18px',
   fill: '#ffffff',
 });
+const UI_FONT_STYLE_WRAPPED = Object.freeze({ ...UI_FONT_STYLE, wordWrap: { width: 300 } });
 
 const PLACEHOLDER_SPRITE_STYLE = Object.freeze({
   fontFamily: 'Rubik',
@@ -27,9 +28,30 @@ const GRID_OFFSET_y = 64;
 
 class UiSprites {
   health_label = null;
+  messages_label = null;
 
-  update(player_ref) {
+  constructor(gameplay_scene) {
+    this.health_label = this._add_label(gameplay_scene, 128, 400, "HP: XX", UI_FONT_STYLE);
+    this.messages_label = this._add_label(gameplay_scene, 500, GRID_OFFSET_y, "", UI_FONT_STYLE_WRAPPED);
+    this.update(gameplay_scene.game);
+  }
+
+  _add_label(gameplay_scene, x, y, initial_text, style) {
+    const label = gameplay_scene.add.text(x, y, initial_text, style);
+    label.setScrollFactor(0);
+    label.setDepth(UI_DEPTH);
+    return label
+  }
+
+  update(game) {
+    const player_ref = game.current_floor.player_ref;
     this.health_label.setText(`HP: ${player_ref.current_hp}`);
+
+    let messages_text = "";
+    for (const message of game.get_messages()) {
+      messages_text += ` - ${message}\n`;
+    }
+    this.messages_label.setText(messages_text);
   }
 }
 
@@ -65,9 +87,9 @@ class GameplayScene extends Phaser.Scene {
 
   _create_sprite_for_actor(actor_ref) {
     let test_char = null;
-    if (actor_ref.behavior === Model.ActorBehavior.PLAYER_INPUT) {
+    if (actor_ref.template === Model.ActorTemplate.PLAYER) {
       test_char = "@";
-    } else if (actor_ref.behavior === Model.ActorBehavior.PATROL_VERTICALLY) {
+    } else if (actor_ref.template === Model.ActorTemplate.HERON) {
       test_char = "v";
     };
     const [screen_x, screen_y] = this._tile_to_screen_coord(actor_ref.tile_x, actor_ref.tile_y);
@@ -95,11 +117,7 @@ class GameplayScene extends Phaser.Scene {
       this.actor_sprites[actor.id] = this._create_sprite_for_actor(actor);
     }
 
-    this.ui_sprites = new UiSprites();
-    this.ui_sprites.health_label = this.add.text(128, 400, "HP: XX", UI_FONT_STYLE);
-    this.ui_sprites.health_label.setScrollFactor(0);
-    this.ui_sprites.health_label.setDepth(UI_DEPTH);
-    this.ui_sprites.update(this.game.current_floor.player_ref);
+    this.ui_sprites = new UiSprites(this);
   }
 
   _update_sprites(tile_delta_x, tile_delta_y) {
@@ -125,7 +143,7 @@ class GameplayScene extends Phaser.Scene {
       this.actor_sprites[actor.id].setPosition(screen_x, screen_y);
     }
 
-    this.ui_sprites.update(this.game.current_floor.player_ref);
+    this.ui_sprites.update(this.game);
   }
 
   on_key_down(event) {

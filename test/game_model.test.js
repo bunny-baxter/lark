@@ -27,14 +27,16 @@ test("actor doesn't walk into walls", () => {
 test("flower hazard does damage on cycle", () => {
   const initial_hp = floor.player_ref.current_hp;
   floor.set_cell(1, 1, Model.CellType.FLOWER_HAZARD);
-  for (let i = 0; i < Model.FLOWER_HAZARD_CYCLE_LENGTH; i++) {
+  for (let i = 0; i < Model.FLOWER_HAZARD_CYCLE_LENGTH - 1; i++) {
     game.execute_command(Model.Command.PASS);
   }
   const hp_after_hit = floor.player_ref.current_hp;
   expect(hp_after_hit).toBeLessThan(initial_hp);
+  expect(game.get_messages().length).toBe(1);
   // Should not hit on every turn.
   game.execute_command(Model.Command.PASS);
   expect(floor.player_ref.current_hp).toBe(hp_after_hit);
+  expect(game.get_messages().length).toBe(0);
 });
 
 test("heron enemy moves vertically", () => {
