@@ -1,5 +1,4 @@
 import * as Model from './game_model.js';
-import * as Util from './util.js';
 
 const SCREEN_WIDTH = 1024;
 const SCREEN_HEIGHT = 576;

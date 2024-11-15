@@ -1,4 +1,5 @@
 import * as Messages from './messages.js';
+import * as Util from './util.js';
 
 export const CellType = Object.freeze({
   OUT_OF_BOUNDS: Symbol("OUT_OF_BOUNDS"),
@@ -21,17 +22,19 @@ export const ActorBehavior = Object.freeze({
 
 class ActorTemplateEntry {
   display_name;
+  attack_verb;
   behavior;
 
-  constructor(display_name, behavior) {
+  constructor(display_name, attack_verb, behavior) {
     this.display_name = display_name;
+    this.attack_verb = attack_verb;
     this.behavior = behavior;
   }
 }
 
 export const ActorTemplate = Object.freeze({
-  PLAYER: new ActorTemplateEntry("Rogue", ActorBehavior.PLAYER_INPUT),
-  HERON: new ActorTemplateEntry("heron", ActorBehavior.PATROL_VERTICALLY),
+  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT),
+  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -110,6 +113,20 @@ export class Floor {
     return true;
   }
 
+  _actor_fight_actor(attacker_ref, defender_ref) {
+    this.parent_game.add_message(Messages.fight(
+      attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
+    defender_ref.current_hp -= 1;
+  }
+
+  actor_fight(actor_ref, delta_x, delta_y) {
+    const target_x = actor_ref.tile_x + delta_x;
+    const target_y = actor_ref.tile_y + delta_y;
+    for (const other_actor of this.find_actors_at(target_x, target_y)) {
+      this._actor_fight_actor(actor_ref, other_actor);
+    }
+  }
+
   find_actors_at(tile_x, tile_y) {
     const result = [];
     for (const actor of this.actors) {
@@ -164,6 +181,12 @@ export class Floor {
 
   _do_actors_turn(actor) {
     console.assert(actor.template.behavior !== ActorBehavior.PLAYER_INPUT);
+
+    if (Util.taxicab_distance(actor.tile_x, actor.tile_y, this.player_ref.tile_x, this.player_ref.tile_y) === 1) {
+      this.actor_fight(actor, this.player_ref.tile_x - actor.tile_x, this.player_ref.tile_y - actor.tile_y);
+      return;
+    }
+
     if (actor.template.behavior === ActorBehavior.PATROL_VERTICALLY) {
       if (actor.behavior_state === null) {
         actor.behavior_state = 1;
@@ -196,6 +219,10 @@ export const Command = Object.freeze({
   WALK_DOWN: Symbol("WALK_DOWN"),
   WALK_LEFT: Symbol("WALK_LEFT"),
   WALK_RIGHT: Symbol("WALK_RIGHT"),
+  FIGHT_UP: Symbol("FIGHT_UP"),
+  FIGHT_DOWN: Symbol("FIGHT_DOWN"),
+  FIGHT_LEFT: Symbol("FIGHT_LEFT"),
+  FIGHT_RIGHT: Symbol("FIGHT_RIGHT"),
 });
 
 export class Game {
@@ -232,6 +259,14 @@ export class Game {
       this.current_floor.actor_walk(this.current_floor.player_ref, -1, 0);
     } else if (command === Command.WALK_RIGHT) {
       this.current_floor.actor_walk(this.current_floor.player_ref, 1, 0);
+    } else if (command === Command.FIGHT_UP) {
+      this.current_floor.actor_fight(this.current_floor.player_ref, 0, -1);
+    } else if (command === Command.FIGHT_DOWN) {
+      this.current_floor.actor_fight(this.current_floor.player_ref, 0, 1);
+    } else if (command === Command.FIGHT_LEFT) {
+      this.current_floor.actor_fight(this.current_floor.player_ref, -1, 0);
+    } else if (command === Command.FIGHT_RIGHT) {
+      this.current_floor.actor_fight(this.current_floor.player_ref, 1, 0);
     }
 
     this._end_player_turn();

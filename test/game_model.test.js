@@ -48,3 +48,13 @@ test("heron enemy moves vertically", () => {
     expect([heron_ref.tile_x, heron_ref.tile_y]).toEqual(path[i]);
   }
 });
+
+test("adjacent enemy attacks player", () => {
+  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const initial_hp = floor.player_ref.current_hp;
+  game.execute_command(Model.Command.PASS);
+  // Enemy has not moved, and instead attacked the player.
+  expect([heron_ref.tile_x, heron_ref.tile_y]).toEqual([2, 1]);
+  expect(floor.player_ref.current_hp).toBeLessThan(initial_hp);
+  expect(game.get_messages().length).toBe(1);
+});
