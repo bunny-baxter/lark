@@ -119,7 +119,7 @@ class GameplayScene extends Phaser.Scene {
     this.ui_sprites = new UiSprites(this);
   }
 
-  _update_sprites(tile_delta_x, tile_delta_y) {
+  _update_sprites() {
     for (let x = 0; x < this.game.current_floor.size_tiles.w; x++) {
       for (let y = 0; y < this.game.current_floor.size_tiles.h; y++) {
         const cell_data = this.game.current_floor.cells[x][y];
@@ -145,15 +145,27 @@ class GameplayScene extends Phaser.Scene {
     this.ui_sprites.update(this.game);
   }
 
+  _execute_walk_or_fight(walk_command, fight_command, delta_x, delta_y) {
+    console.assert(delta_x !== 0 || delta_y !== 0);
+    const player_ref = this.game.current_floor.player_ref;
+    const next_x = player_ref.tile_x + delta_x;
+    const next_y = player_ref.tile_y + delta_y;
+    if (this.game.current_floor.find_actors_at(next_x, next_y).length > 0) {
+      this.game.execute_command(fight_command);
+    } else {
+      this.game.execute_command(walk_command);
+    }
+  }
+
   on_key_down(event) {
     if (event.code === "KeyH") {
-      this.game.execute_command(Model.Command.WALK_LEFT);
+      this._execute_walk_or_fight(Model.Command.WALK_LEFT, Model.Command.FIGHT_LEFT, -1, 0);
     } else if (event.code === "KeyJ") {
-      this.game.execute_command(Model.Command.WALK_DOWN);
+      this._execute_walk_or_fight(Model.Command.WALK_DOWN, Model.Command.FIGHT_DOWN, 0, 1);
     } else if (event.code === "KeyK") {
-      this.game.execute_command(Model.Command.WALK_UP);
+      this._execute_walk_or_fight(Model.Command.WALK_UP, Model.Command.FIGHT_UP, 0, -1);
     } else if (event.code === "KeyL") {
-      this.game.execute_command(Model.Command.WALK_RIGHT);
+      this._execute_walk_or_fight(Model.Command.WALK_RIGHT, Model.Command.FIGHT_RIGHT, 1, 0);
     } else if (event.code === "Period") {
       this.game.execute_command(Model.Command.PASS);
     }

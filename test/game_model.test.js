@@ -58,3 +58,19 @@ test("adjacent enemy attacks player", () => {
   expect(floor.player_ref.current_hp).toBeLessThan(initial_hp);
   expect(game.get_messages().length).toBe(1);
 });
+
+test("cannot move into other actor's space", () => {
+  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  // Player did not move.
+  expect([floor.player_ref.tile_x, floor.player_ref.tile_y]).toEqual([1, 1]);
+});
+
+test("player attacks enemy", () => {
+  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const initial_hp = heron_ref.current_hp;
+  game.execute_command(Model.Command.FIGHT_RIGHT);
+  expect(heron_ref.current_hp).toBeLessThan(initial_hp);
+  // Message 1: player attacks heron. Message 2: heron attacks player.
+  expect(game.get_messages().length).toBe(2);
+});

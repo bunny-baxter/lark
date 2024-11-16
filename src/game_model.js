@@ -109,6 +109,10 @@ export class Floor {
     if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.OUT_OF_BOUNDS) {
       return false;
     }
+    if (this.find_actors_at(next_x, next_y).length > 0) {
+      // Any actor in the space blocks movement.
+      return false;
+    }
     this.teleport_actor(actor_ref, next_x, next_y);
     return true;
   }
