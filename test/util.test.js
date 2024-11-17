@@ -11,3 +11,11 @@ test("capitalize", () => {
   expect(Util.capitalize("Nothing")).toBe("Nothing");
   expect(Util.capitalize("")).toBe("");
 });
+
+test("remove_first", () => {
+  const array = [1, 2, 3, 4];
+  Util.remove_first(array, 3)
+  expect(array).toEqual([1, 2, 4]);
+  Util.remove_first(array, 3);
+  expect(array).toEqual([1, 2, 4]);
+});

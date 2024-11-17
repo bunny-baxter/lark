@@ -24,17 +24,19 @@ class ActorTemplateEntry {
   display_name;
   attack_verb;
   behavior;
+  max_hp;
 
-  constructor(display_name, attack_verb, behavior) {
+  constructor(display_name, attack_verb, behavior, max_hp) {
     this.display_name = display_name;
     this.attack_verb = attack_verb;
     this.behavior = behavior;
+    this.max_hp = max_hp;
   }
 }
 
 export const ActorTemplate = Object.freeze({
-  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT),
-  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY),
+  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT, 12),
+  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -53,7 +55,15 @@ export class Actor {
   tile_x = 0;
   tile_y = 0;
 
-  current_hp = 10;
+  current_hp;
+  is_dead = false;
+
+  constructor(id, template) {
+    this.id = id;
+    this.template = template;
+
+    this.current_hp = template.max_hp;
+  }
 }
 
 export class Floor {
@@ -83,11 +93,9 @@ export class Floor {
   }
 
   create_actor(template, x, y) {
-    const actor = new Actor();
+    const actor = new Actor(this.next_id, template);
     actor.tile_x = x;
     actor.tile_y = y;
-    actor.id = this.next_id;
-    actor.template = template;
     this.next_id += 1;
     this.actors.push(actor);
     return actor;
@@ -97,7 +105,7 @@ export class Floor {
     this.player_ref = this.create_actor(ActorTemplate.PLAYER, x, y);
   }
 
-  teleport_actor(actor_ref, to_x, to_y) {
+  _teleport_actor(actor_ref, to_x, to_y) {
     actor_ref.tile_x = to_x;
     actor_ref.tile_y = to_y;
   }
@@ -113,14 +121,23 @@ export class Floor {
       // Any actor in the space blocks movement.
       return false;
     }
-    this.teleport_actor(actor_ref, next_x, next_y);
+    this._teleport_actor(actor_ref, next_x, next_y);
     return true;
+  }
+
+  _hurt_actor(actor, n_damage) {
+    actor.current_hp -= 1;
+    if (actor.current_hp <= 0) {
+      actor.is_dead = true;
+      Util.remove_first(this.actors, actor);
+      this.parent_game.add_message(Messages.die(actor.template.display_name));
+    }
   }
 
   _actor_fight_actor(attacker_ref, defender_ref) {
     this.parent_game.add_message(Messages.fight(
       attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
-    defender_ref.current_hp -= 1;
+    this._hurt_actor(defender_ref, 1);
   }
 
   actor_fight(actor_ref, delta_x, delta_y) {
@@ -172,8 +189,8 @@ export class Floor {
       if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 1) {
         cell_data.phase = Phase.ACTIVE;
         for (const actor of this.find_actors_at(x, y)) {
-          actor.current_hp -= 1;
           this.parent_game.add_message(Messages.flower_hit(actor.template.display_name));
+          this._hurt_actor(actor, 1);
         }
       } else if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 2) {
         cell_data.phase = Phase.READY;

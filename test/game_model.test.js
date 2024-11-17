@@ -74,3 +74,13 @@ test("player attacks enemy", () => {
   // Message 1: player attacks heron. Message 2: heron attacks player.
   expect(game.get_messages().length).toBe(2);
 });
+
+test("player defeats enemy", () => {
+  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  expect(heron_ref.is_dead).toBe(false);
+  while (heron_ref.current_hp > 0) {
+    game.execute_command(Model.Command.FIGHT_RIGHT);
+  }
+  expect(heron_ref.is_dead).toBe(true);
+  expect(floor.find_actors_at(2, 1).length).toBe(0);
+});

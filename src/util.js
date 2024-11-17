@@ -17,3 +17,10 @@ export function capitalize(str) {
   }
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+export function remove_first(array, element) {
+  const i = array.indexOf(element);
+  if (i >= 0) {
+    array.splice(i, 1);
+  }
+}

@@ -57,7 +57,7 @@ class UiSprites {
 class GameplayScene extends Phaser.Scene {
   game;
   cell_sprites;
-  actor_sprites = {};
+  actor_sprites = new Map();
   ui_sprites;
   sprites_latest_turn = 0;
 
@@ -113,7 +113,7 @@ class GameplayScene extends Phaser.Scene {
     }
 
     for (const actor of this.game.current_floor.actors) {
-      this.actor_sprites[actor.id] = this._create_sprite_for_actor(actor);
+      this.actor_sprites.set(actor.id, this._create_sprite_for_actor(actor));
     }
 
     this.ui_sprites = new UiSprites(this);
@@ -137,9 +137,16 @@ class GameplayScene extends Phaser.Scene {
       }
     }
 
+    const actor_ids = new Set(this.actor_sprites.keys());
     for (const actor of this.game.current_floor.actors) {
       const [screen_x, screen_y] = this._tile_to_screen_coord(actor.tile_x, actor.tile_y);
-      this.actor_sprites[actor.id].setPosition(screen_x, screen_y);
+      this.actor_sprites.get(actor.id).setPosition(screen_x, screen_y);
+      actor_ids.delete(actor.id);
+    }
+    for (const actor_id of actor_ids) {
+      // These IDs were not seen in the list of actors. They must have been deleted.
+      this.actor_sprites.get(actor_id).destroy(true);
+      this.actor_sprites.delete(actor_id);
     }
 
     this.ui_sprites.update(this.game);
