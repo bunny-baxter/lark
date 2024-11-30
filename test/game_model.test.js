@@ -84,3 +84,26 @@ test("player defeats enemy", () => {
   expect(heron_ref.is_dead).toBe(true);
   expect(floor.find_actors_at(2, 1).length).toBe(0);
 });
+
+test("basic item manipulation", () => {
+  const item_ref = floor.create_item(Model.ItemTemplate.ORDINARY_STONE, 1, 1);
+  expect([item_ref.tile_x, item_ref.tile_y]).toEqual([1, 1]);
+  expect(item_ref.held_actor).toBe(null);
+  expect(floor.player_ref.inventory).toEqual([]);
+
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  expect(item_ref.held_actor).toBe(floor.player_ref);
+  expect(floor.player_ref.inventory).toEqual([item_ref]);
+
+  // Item moves with player.
+  game.execute_command(Model.Command.WALK_DOWN);
+  expect([item_ref.tile_x, item_ref.tile_y]).toEqual([1, 2]);
+
+  game.execute_command(Model.Command.DROP_ITEM, item_ref);
+  expect(item_ref.held_actor).toBe(null);
+  expect(floor.player_ref.inventory).toEqual([]);
+
+  // Item stays behind.
+  game.execute_command(Model.Command.WALK_UP);
+  expect([item_ref.tile_x, item_ref.tile_y]).toEqual([1, 2]);
+});

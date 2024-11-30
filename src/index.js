@@ -5,8 +5,9 @@ const SCREEN_HEIGHT = 576;
 
 const TILE_SIZE = 32;
 
-const ACTOR_DEPTH = 1;
-const UI_DEPTH = 2;
+const ITEM_DEPTH = 1;
+const ACTOR_DEPTH = 2;
+const UI_DEPTH = 3;
 
 const UI_FONT_STYLE = Object.freeze({
   fontFamily: 'Rubik',
@@ -54,12 +55,72 @@ class UiSprites {
   }
 }
 
+function get_item_description(item) {
+  return item.template.display_name;
+}
+
+class InventoryMenu {
+  is_empty;
+  cursor_index = 0;
+  item_list;
+  sprites = [];
+
+  constructor(phaser_scene, item_list, x, y) {
+    this.is_empty = item_list.length === 0;
+    if (this.is_empty) {
+      const sprite = phaser_scene.add.text(x, y, "Inventory is empty.", UI_FONT_STYLE);
+      sprite.setScrollFactor(0);
+      sprite.setDepth(UI_DEPTH);
+      this.sprites.push(sprite);
+    } else {
+      this.item_list = item_list;
+      for (let i = 0; i < this.item_list.length; i++) {
+        const item = this.item_list[i];
+        const description = `${i + 1}. ${get_item_description(item)}`;
+        const sprite = phaser_scene.add.text(x, y + i * 24, description, UI_FONT_STYLE);
+        sprite.setScrollFactor(0);
+        sprite.setDepth(UI_DEPTH);
+        this.sprites.push(sprite);
+      }
+      this.move_cursor(0); // Set selected color.
+    }
+  }
+
+  move_cursor(delta) {
+    if (this.is_empty) {
+      return;
+    }
+    this.sprites[this.cursor_index].setColor("#ffffff");
+    this.cursor_index += delta;
+    if (this.cursor_index < 0) {
+      this.cursor_index += this.item_list.length;
+    } else if (this.cursor_index >= this.item_list.length) {
+      this.cursor_index -= this.item_list.length;
+    }
+    this.sprites[this.cursor_index].setColor("#ffff00");
+  }
+
+  get_selected_item() {
+    if (this.is_empty) {
+      return null;
+    }
+    return this.item_list[this.cursor_index];
+  }
+
+  destroy() {
+    for (const sprite of this.sprites) {
+      sprite.destroy(true);
+    }
+  }
+}
+
 class GameplayScene extends Phaser.Scene {
   game;
   cell_sprites;
-  actor_sprites = new Map();
+  object_sprites = new Map();
   ui_sprites;
   sprites_latest_turn = 0;
+  inventory_menu = null;
 
   preload() {
   }
@@ -84,17 +145,19 @@ class GameplayScene extends Phaser.Scene {
     return null;
   }
 
-  _create_sprite_for_actor(actor_ref) {
+  _create_sprite_for_object(object_ref, is_actor) {
     let test_char = null;
-    if (actor_ref.template === Model.ActorTemplate.PLAYER) {
+    if (object_ref.template === Model.ActorTemplate.PLAYER) {
       test_char = "@";
-    } else if (actor_ref.template === Model.ActorTemplate.HERON) {
+    } else if (object_ref.template === Model.ActorTemplate.HERON) {
       test_char = "v";
-    };
-    const [screen_x, screen_y] = this._tile_to_screen_coord(actor_ref.tile_x, actor_ref.tile_y);
+    } else if (object_ref.template === Model.ItemTemplate.ORDINARY_STONE) {
+      test_char = "*";
+    }
+    const [screen_x, screen_y] = this._tile_to_screen_coord(object_ref.tile_x, object_ref.tile_y);
     const sprite = this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
-    sprite.setDepth(ACTOR_DEPTH);
-    sprite.setColor("#ffff00");
+    sprite.setDepth(is_actor ? ACTOR_DEPTH : ITEM_DEPTH);
+    sprite.setColor(is_actor ? "#ffff00" : "#88aa88");
     return sprite;
   }
 
@@ -113,7 +176,11 @@ class GameplayScene extends Phaser.Scene {
     }
 
     for (const actor of this.game.current_floor.actors) {
-      this.actor_sprites.set(actor.id, this._create_sprite_for_actor(actor));
+      this.object_sprites.set(actor.id, this._create_sprite_for_object(actor, true));
+    }
+    for (const item of this.game.current_floor.items) {
+      // Actor and Item IDs are unique between the two.
+      this.object_sprites.set(item.id, this._create_sprite_for_object(item, false));
     }
 
     this.ui_sprites = new UiSprites(this);
@@ -137,16 +204,16 @@ class GameplayScene extends Phaser.Scene {
       }
     }
 
-    const actor_ids = new Set(this.actor_sprites.keys());
-    for (const actor of this.game.current_floor.actors) {
-      const [screen_x, screen_y] = this._tile_to_screen_coord(actor.tile_x, actor.tile_y);
-      this.actor_sprites.get(actor.id).setPosition(screen_x, screen_y);
-      actor_ids.delete(actor.id);
+    const object_ids = new Set(this.object_sprites.keys());
+    for (const object of [].concat(this.game.current_floor.actors, this.game.current_floor.items)) {
+      const [screen_x, screen_y] = this._tile_to_screen_coord(object.tile_x, object.tile_y);
+      this.object_sprites.get(object.id).setPosition(screen_x, screen_y);
+      object_ids.delete(object.id);
     }
-    for (const actor_id of actor_ids) {
-      // These IDs were not seen in the list of actors. They must have been deleted.
-      this.actor_sprites.get(actor_id).destroy(true);
-      this.actor_sprites.delete(actor_id);
+    for (const id of object_ids) {
+      // These IDs were not seen. They must have been deleted.
+      this.object_sprites.get(id).destroy(true);
+      this.object_sprites.delete(id);
     }
 
     this.ui_sprites.update(this.game);
@@ -165,16 +232,57 @@ class GameplayScene extends Phaser.Scene {
   }
 
   on_key_down(event) {
-    if (event.code === "KeyH") {
-      this._execute_walk_or_fight(Model.Command.WALK_LEFT, Model.Command.FIGHT_LEFT, -1, 0);
-    } else if (event.code === "KeyJ") {
-      this._execute_walk_or_fight(Model.Command.WALK_DOWN, Model.Command.FIGHT_DOWN, 0, 1);
-    } else if (event.code === "KeyK") {
-      this._execute_walk_or_fight(Model.Command.WALK_UP, Model.Command.FIGHT_UP, 0, -1);
-    } else if (event.code === "KeyL") {
-      this._execute_walk_or_fight(Model.Command.WALK_RIGHT, Model.Command.FIGHT_RIGHT, 1, 0);
+    // TODO: Should have separate functions to handle keypresses for menu vs. gameplay probably, since all the if(inventory_menu) blocks here are getting messy.
+    if (event.code === "KeyH" || event.code === "ArrowLeft") {
+      if (!this.inventory_menu) {
+        this._execute_walk_or_fight(Model.Command.WALK_LEFT, Model.Command.FIGHT_LEFT, -1, 0);
+      }
+    } else if (event.code === "KeyJ" || event.code === "ArrowDown") {
+      if (this.inventory_menu) {
+        this.inventory_menu.move_cursor(1);
+      } else {
+        this._execute_walk_or_fight(Model.Command.WALK_DOWN, Model.Command.FIGHT_DOWN, 0, 1);
+      }
+    } else if (event.code === "KeyK" || event.code === "ArrowUp") {
+      if (this.inventory_menu) {
+        this.inventory_menu.move_cursor(-1);
+      } else {
+        this._execute_walk_or_fight(Model.Command.WALK_UP, Model.Command.FIGHT_UP, 0, -1);
+      }
+    } else if (event.code === "KeyL" || event.code === "ArrowRight") {
+      if (!this.inventory_menu) {
+        this._execute_walk_or_fight(Model.Command.WALK_RIGHT, Model.Command.FIGHT_RIGHT, 1, 0);
+      }
     } else if (event.code === "Period") {
-      this.game.execute_command(Model.Command.PASS);
+      if (!this.inventory_menu) {
+        this.game.execute_command(Model.Command.PASS);
+      }
+    } else if (event.code === "KeyI") {
+      if (this.inventory_menu) {
+        this.inventory_menu.destroy();
+        this.inventory_menu = null;
+      } else {
+        this.inventory_menu = new InventoryMenu(this, this.game.current_floor.player_ref.inventory, 500, 200);
+      }
+    } else if (event.code === "KeyG" || event.code === "Comma") {
+      if (!this.inventory_menu) {
+        const player_ref = this.game.current_floor.player_ref;
+        const items = this.game.current_floor.find_loose_items_at(player_ref.tile_x, player_ref.tile_y);
+        if (items.length > 0) {
+          this.game.execute_command(Model.Command.GET_ITEM, items[0]);
+        }
+      }
+    } else if (event.code === "KeyD") {
+      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+        this.game.execute_command(Model.Command.DROP_ITEM, this.inventory_menu.get_selected_item());
+        this.inventory_menu.destroy();
+        this.inventory_menu = null;
+      }
+    } else if (event.code === "Escape") {
+      if (this.inventory_menu) {
+        this.inventory_menu.destroy();
+        this.inventory_menu = null;
+      }
     }
 
     if (this.sprites_latest_turn < this.game.turn) {

@@ -39,6 +39,18 @@ export const ActorTemplate = Object.freeze({
   HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4),
 });
 
+class ItemTemplateEntry {
+  display_name;
+
+  constructor(display_name) {
+    this.display_name = display_name;
+  }
+}
+
+export const ItemTemplate = Object.freeze({
+  ORDINARY_STONE: new ItemTemplateEntry("ordinary stone"),
+});
+
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
 
 export class CellData {
@@ -56,6 +68,7 @@ export class Actor {
   tile_y = 0;
 
   current_hp;
+  inventory = null;
   is_dead = false;
 
   constructor(id, template) {
@@ -63,6 +76,23 @@ export class Actor {
     this.template = template;
 
     this.current_hp = template.max_hp;
+    // Only the player has an inventory for now.
+    if (template === ActorTemplate.PLAYER) {
+      this.inventory = [];
+    }
+  }
+}
+
+export class Item {
+  id;
+  template;
+  tile_x = 0;
+  tile_y = 0;
+  held_actor = null;
+
+  constructor(id, template) {
+    this.id = id;
+    this.template = template;
   }
 }
 
@@ -72,6 +102,7 @@ export class Floor {
   size_tiles;
   cells;
   actors = [];
+  items = [];
   player_ref = null;
 
   constructor(parent_game, width_tiles, height_tiles) {
@@ -108,6 +139,12 @@ export class Floor {
   _teleport_actor(actor_ref, to_x, to_y) {
     actor_ref.tile_x = to_x;
     actor_ref.tile_y = to_y;
+    if (actor_ref.inventory) {
+      for (const item_ref of actor_ref.inventory) {
+        item_ref.tile_x = to_x;
+        item_ref.tile_y = to_y;
+      }
+    }
   }
 
   actor_walk(actor_ref, delta_x, delta_y) {
@@ -156,6 +193,42 @@ export class Floor {
       }
     }
     return result;
+  }
+
+  find_loose_items_at(tile_x, tile_y) {
+    const result = [];
+    for (const item of this.items) {
+      if (!item.held_actor && item.tile_x === tile_x && item.tile_y === tile_y) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
+  create_item(template, tile_x, tile_y) {
+    const item = new Item(this.next_id, template);
+    item.tile_x = tile_x;
+    item.tile_y = tile_y;
+    this.next_id += 1;
+    this.items.push(item);
+    return item;
+  }
+
+  player_get_item(item_ref) {
+    console.assert(item_ref.held_actor === null);
+    console.assert(item_ref.tile_x === this.player_ref.tile_x && item_ref.tile_y === this.player_ref.tile_y);
+
+    this.parent_game.add_message(Messages.get_item(this.player_ref.template.display_name, item_ref.template.display_name));
+    item_ref.held_actor = this.player_ref;
+    this.player_ref.inventory.push(item_ref);
+  }
+
+  player_drop_item(item_ref) {
+    console.assert(item_ref.held_actor === this.player_ref);
+
+    this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.template.display_name));
+    item_ref.held_actor = null;
+    Util.remove_first(this.player_ref.inventory, item_ref);
   }
 
   is_out_of_bounds(x, y) {
@@ -244,6 +317,8 @@ export const Command = Object.freeze({
   FIGHT_DOWN: Symbol("FIGHT_DOWN"),
   FIGHT_LEFT: Symbol("FIGHT_LEFT"),
   FIGHT_RIGHT: Symbol("FIGHT_RIGHT"),
+  GET_ITEM: Symbol("GET_ITEM"),
+  DROP_ITEM: Symbol("DROP_ITEM"),
 });
 
 export class Game {
@@ -262,6 +337,9 @@ export class Game {
     this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
 
     this.current_floor.create_actor(ActorTemplate.HERON, 3, 1);
+
+    this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 2, 2);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 3, 2);
   }
 
   _end_player_turn() {
@@ -269,7 +347,7 @@ export class Game {
     this.current_floor.do_end_of_turn();
   }
 
-  execute_command(command) {
+  execute_command(command, opt_param) {
     this.messages = [];
 
     if (command === Command.WALK_UP) {
@@ -288,6 +366,12 @@ export class Game {
       this.current_floor.actor_fight(this.current_floor.player_ref, -1, 0);
     } else if (command === Command.FIGHT_RIGHT) {
       this.current_floor.actor_fight(this.current_floor.player_ref, 1, 0);
+    } else if (command === Command.GET_ITEM) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_get_item(opt_param);
+    } else if (command === Command.DROP_ITEM) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_drop_item(opt_param);
     }
 
     this._end_player_turn();
