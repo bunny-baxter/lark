@@ -56,7 +56,11 @@ class UiSprites {
 }
 
 function get_item_description(item) {
-  return item.template.display_name;
+  let description = item.template.display_name;
+  if (item.equipped) {
+    description += " (equipped)";
+  }
+  return description;
 }
 
 class InventoryMenu {
@@ -153,6 +157,8 @@ class GameplayScene extends Phaser.Scene {
       test_char = "v";
     } else if (object_ref.template === Model.ItemTemplate.ORDINARY_STONE) {
       test_char = "*";
+    } else if (object_ref.template === Model.ItemTemplate.ORDINARY_SWORD) {
+      test_char = "/";
     }
     const [screen_x, screen_y] = this._tile_to_screen_coord(object_ref.tile_x, object_ref.tile_y);
     const sprite = this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
@@ -277,6 +283,15 @@ class GameplayScene extends Phaser.Scene {
         this.game.execute_command(Model.Command.DROP_ITEM, this.inventory_menu.get_selected_item());
         this.inventory_menu.destroy();
         this.inventory_menu = null;
+      }
+    } else if (event.code === "KeyW") {
+      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+        const item = this.inventory_menu.get_selected_item();
+        if (item.template.equipment_slot) {
+          this.game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item);
+          this.inventory_menu.destroy();
+          this.inventory_menu = null;
+        }
       }
     } else if (event.code === "Escape") {
       if (this.inventory_menu) {

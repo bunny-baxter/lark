@@ -20,35 +20,45 @@ export const ActorBehavior = Object.freeze({
   PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
 });
 
+// TODO: Both template entry types should take a config object, so that properties can have names and optional properties can be omitted.
+// Also maybe move them to another file? Just for organizational purposes.
+
 class ActorTemplateEntry {
   display_name;
   attack_verb;
   behavior;
   max_hp;
+  starting_attack_power;
 
-  constructor(display_name, attack_verb, behavior, max_hp) {
+  constructor(display_name, attack_verb, behavior, max_hp, starting_attack_power) {
     this.display_name = display_name;
     this.attack_verb = attack_verb;
     this.behavior = behavior;
     this.max_hp = max_hp;
+    this.starting_attack_power = starting_attack_power
   }
 }
 
 export const ActorTemplate = Object.freeze({
-  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT, 12),
-  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4),
+  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT, 12, 1),
+  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4, 1),
 });
 
 class ItemTemplateEntry {
   display_name;
+  equipment_slot;
+  equipped_attack_power;
 
-  constructor(display_name) {
+  constructor(display_name, equipment_slot, equipped_attack_power) {
     this.display_name = display_name;
+    this.equipment_slot = equipment_slot;
+    this.equipped_attack_power = equipped_attack_power;
   }
 }
 
 export const ItemTemplate = Object.freeze({
-  ORDINARY_STONE: new ItemTemplateEntry("ordinary stone"),
+  ORDINARY_STONE: new ItemTemplateEntry("ordinary stone", null, 0),
+  ORDINARY_SWORD: new ItemTemplateEntry("steel sword", "weapon", 2),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -68,6 +78,7 @@ export class Actor {
   tile_y = 0;
 
   current_hp;
+  attack_power;
   inventory = null;
   is_dead = false;
 
@@ -76,6 +87,7 @@ export class Actor {
     this.template = template;
 
     this.current_hp = template.max_hp;
+    this.attack_power = template.starting_attack_power;
     // Only the player has an inventory for now.
     if (template === ActorTemplate.PLAYER) {
       this.inventory = [];
@@ -89,6 +101,7 @@ export class Item {
   tile_x = 0;
   tile_y = 0;
   held_actor = null;
+  equipped = false;
 
   constructor(id, template) {
     this.id = id;
@@ -163,7 +176,7 @@ export class Floor {
   }
 
   _hurt_actor(actor, n_damage) {
-    actor.current_hp -= 1;
+    actor.current_hp -= n_damage;
     if (actor.current_hp <= 0) {
       actor.is_dead = true;
       Util.remove_first(this.actors, actor);
@@ -172,9 +185,10 @@ export class Floor {
   }
 
   _actor_fight_actor(attacker_ref, defender_ref) {
+    // TODO: Change message based on wielded weapon.
     this.parent_game.add_message(Messages.fight(
       attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
-    this._hurt_actor(defender_ref, 1);
+    this._hurt_actor(defender_ref, attacker_ref.attack_power);
   }
 
   actor_fight(actor_ref, delta_x, delta_y) {
@@ -229,6 +243,17 @@ export class Floor {
     this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.template.display_name));
     item_ref.held_actor = null;
     Util.remove_first(this.player_ref.inventory, item_ref);
+  }
+
+  player_toggle_equipment(item_ref) {
+    console.assert(item_ref.held_actor === this.player_ref);
+    this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.template.display_name, item_ref.template.equipment_slot));
+    item_ref.equipped = !item_ref.equipped;
+    if (item_ref.equipped) {
+      this.player_ref.attack_power += item_ref.template.equipped_attack_power;
+    } else {
+      this.player_ref.attack_power -= item_ref.template.equipped_attack_power;
+    }
   }
 
   is_out_of_bounds(x, y) {
@@ -319,6 +344,7 @@ export const Command = Object.freeze({
   FIGHT_RIGHT: Symbol("FIGHT_RIGHT"),
   GET_ITEM: Symbol("GET_ITEM"),
   DROP_ITEM: Symbol("DROP_ITEM"),
+  TOGGLE_EQUIPMENT: Symbol("TOGGLE_EQUIPMENT"),
 });
 
 export class Game {
@@ -338,7 +364,7 @@ export class Game {
 
     this.current_floor.create_actor(ActorTemplate.HERON, 3, 1);
 
-    this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 2, 2);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, 2, 2);
     this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 3, 2);
   }
 
@@ -372,6 +398,9 @@ export class Game {
     } else if (command === Command.DROP_ITEM) {
       console.assert(opt_param !== undefined);
       this.current_floor.player_drop_item(opt_param);
+    } else if (command === Command.TOGGLE_EQUIPMENT) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_toggle_equipment(opt_param);
     }
 
     this._end_player_turn();

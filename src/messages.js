@@ -19,3 +19,11 @@ export function get_item(actor_name, item_name) {
 export function drop_item(actor_name, item_name) {
   return `${Util.capitalize(actor_name)} drops ${item_name}.`;
 }
+
+export function equip_item(actor_name, item_name, equipment_slot) {
+  let verb = "equips";
+  if (equipment_slot === "weapon") {
+    verb = "wields";
+  }
+  return `${Util.capitalize(actor_name)} ${verb} ${item_name}.`;
+}
