@@ -27,3 +27,15 @@ export function equip_item(actor_name, item_name, equipment_slot) {
   }
   return `${Util.capitalize(actor_name)} ${verb} ${item_name}.`;
 }
+
+export function fairy_inflict_dazzle(actor_name, target_name) {
+  return `${Util.capitalize(actor_name)} dazzles ${target_name} with fairy lights.`;
+}
+
+export function dazzle_miss(actor_name, target_name) {
+  return `${Util.capitalize(actor_name)} is distracted by fairy lights and misses ${target_name}.`;
+}
+
+export function dazzle_fades(actor_name) {
+  return `The fairy lights fade away from ${actor_name}.`;
+}

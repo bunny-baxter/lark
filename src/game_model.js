@@ -18,6 +18,11 @@ export const Phase = Object.freeze({
 export const ActorBehavior = Object.freeze({
   PLAYER_INPUT: Symbol("PLAYER_INPUT"),
   PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
+  INFLICT_DAZZLE: Symbol("INFLICT_DAZZLE"),
+});
+
+export const Condition = Object.freeze({
+  DAZZLE: Symbol("DAZZLE"),
 });
 
 // TODO: Both template entry types should take a config object, so that properties can have names and optional properties can be omitted.
@@ -42,6 +47,7 @@ class ActorTemplateEntry {
 export const ActorTemplate = Object.freeze({
   PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT, 12, 1),
   HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4, 1),
+  STARLIGHT_FAIRY: new ActorTemplateEntry("starlight fairy", "scratches", ActorBehavior.INFLICT_DAZZLE, 5, 1),
 });
 
 class ItemTemplateEntry {
@@ -79,6 +85,7 @@ export class Actor {
 
   current_hp;
   attack_power;
+  conditions = new Map();
   inventory = null;
   is_dead = false;
 
@@ -91,6 +98,16 @@ export class Actor {
     // Only the player has an inventory for now.
     if (template === ActorTemplate.PLAYER) {
       this.inventory = [];
+    }
+  }
+
+  has_condition(condition) {
+    return this.conditions.has(condition);
+  }
+
+  add_condition(condition, turns) {
+    if (!this.conditions.has(condition) || this.conditions.get(condition) < turns) {
+      this.conditions.set(condition, turns);
     }
   }
 }
@@ -185,6 +202,10 @@ export class Floor {
   }
 
   _actor_fight_actor(attacker_ref, defender_ref) {
+    if (attacker_ref.has_condition(Condition.DAZZLE) && Util.rand_int(4) === 0) {
+      this.parent_game.add_message(Messages.dazzle_miss(attacker_ref.template.display_name, defender_ref.template.display_name));
+      return;
+    }
     // TODO: Change message based on wielded weapon.
     this.parent_game.add_message(Messages.fight(
       attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
@@ -301,7 +322,10 @@ export class Floor {
   _do_actors_turn(actor) {
     console.assert(actor.template.behavior !== ActorBehavior.PLAYER_INPUT);
 
-    if (Util.taxicab_distance(actor.tile_x, actor.tile_y, this.player_ref.tile_x, this.player_ref.tile_y) === 1) {
+    const distance_to_player = Util.taxicab_distance(actor.tile_x, actor.tile_y, this.player_ref.tile_x, this.player_ref.tile_y);
+    const orthogonal_to_player = actor.tile_x === this.player_ref.tile_x || actor.tile_y === this.player_ref.tile_y;
+
+    if (distance_to_player === 1) {
       this.actor_fight(actor, this.player_ref.tile_x - actor.tile_x, this.player_ref.tile_y - actor.tile_y);
       return;
     }
@@ -314,10 +338,37 @@ export class Floor {
       if (!walked) {
         actor.behavior_state *= -1;
       }
+    } else if (actor.template.behavior === ActorBehavior.INFLICT_DAZZLE) {
+      if (actor.behavior_state === null) {
+        actor.behavior_state = 0;
+      }
+      actor.behavior_state -= 1;
+      if (distance_to_player === 2 && orthogonal_to_player && actor.behavior_state <= 0) {
+        this.parent_game.add_message(Messages.fairy_inflict_dazzle(actor.template.display_name, this.player_ref.template.display_name));
+        this.player_ref.add_condition(Condition.DAZZLE, 4);
+        actor.behavior_state = 3;
+      } else {
+        // Walk randomly.
+        if (Util.rand_int(3) < 2) {
+          const [delta_x, delta_y] = Util.choose_rand([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+          this.actor_walk(actor, delta_x, delta_y);
+        }
+      }
     }
   }
 
   do_end_of_turn() {
+    for (const condition of this.player_ref.conditions.keys()) {
+      const next_turns = this.player_ref.conditions.get(condition) - 1;
+      if (next_turns === 0) {
+        this.player_ref.conditions.delete(condition);
+        if (condition === Condition.DAZZLE) {
+          this.parent_game.add_message(Messages.dazzle_fades(this.player_ref.template.display_name));
+        }
+      } else {
+        this.player_ref.conditions.set(condition, next_turns);
+      }
+    }
     for (const actor of this.actors) {
       if (actor === this.player_ref) {
         continue;
@@ -363,6 +414,7 @@ export class Game {
     this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
 
     this.current_floor.create_actor(ActorTemplate.HERON, 3, 1);
+    this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 5, 5);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, 2, 2);
     this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 3, 2);

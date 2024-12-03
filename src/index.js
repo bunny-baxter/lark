@@ -14,7 +14,7 @@ const UI_FONT_STYLE = Object.freeze({
   fontSize: '18px',
   fill: '#ffffff',
 });
-const UI_FONT_STYLE_WRAPPED = Object.freeze({ ...UI_FONT_STYLE, wordWrap: { width: 300 } });
+const UI_FONT_STYLE_WRAPPED = Object.freeze({ ...UI_FONT_STYLE, wordWrap: { width: 400 } });
 
 const PLACEHOLDER_SPRITE_STYLE = Object.freeze({
   fontFamily: 'Rubik',
@@ -24,15 +24,21 @@ const PLACEHOLDER_SPRITE_STYLE = Object.freeze({
 });
 
 const GRID_OFFSET_X = 128;
-const GRID_OFFSET_y = 64;
+const GRID_OFFSET_Y = 64;
+
+const CONDITION_LABELS = Object.freeze({
+  [Model.Condition.DAZZLE]: "dazzled",
+});
 
 class UiSprites {
-  health_label = null;
-  messages_label = null;
+  health_label;
+  messages_label;
+  conditions_label;
 
   constructor(gameplay_scene) {
     this.health_label = this._add_label(gameplay_scene, 128, 400, "HP: XX", UI_FONT_STYLE);
-    this.messages_label = this._add_label(gameplay_scene, 500, GRID_OFFSET_y, "", UI_FONT_STYLE_WRAPPED);
+    this.messages_label = this._add_label(gameplay_scene, 500, 64, "", UI_FONT_STYLE_WRAPPED);
+    this.conditions_label = this._add_label(gameplay_scene, 500, 20, "", UI_FONT_STYLE_WRAPPED);
     this.update(gameplay_scene.game);
   }
 
@@ -52,6 +58,12 @@ class UiSprites {
       messages_text += ` - ${message}\n`;
     }
     this.messages_label.setText(messages_text);
+
+    let conditions_text = "";
+    for (const condition of game.current_floor.player_ref.conditions.keys()) {
+      conditions_text += `${CONDITION_LABELS[condition]} `;
+    }
+    this.conditions_label.setText(conditions_text);
   }
 }
 
@@ -130,7 +142,7 @@ class GameplayScene extends Phaser.Scene {
   }
 
   _tile_to_screen_coord(tile_x, tile_y) {
-    return [GRID_OFFSET_X + tile_x * TILE_SIZE, GRID_OFFSET_y + tile_y * TILE_SIZE];
+    return [GRID_OFFSET_X + tile_x * TILE_SIZE, GRID_OFFSET_Y + tile_y * TILE_SIZE];
   }
 
   _create_sprite_for_cell(tile_x, tile_y, cell_type) {
@@ -140,7 +152,7 @@ class GameplayScene extends Phaser.Scene {
     } else if (cell_type === Model.CellType.DEFAULT_WALL) {
       test_char = "#";
     } else if (cell_type === Model.CellType.FLOWER_HAZARD) {
-      test_char = "f";
+      test_char = "o";
     };
     if (test_char) {
       const [screen_x, screen_y] = this._tile_to_screen_coord(tile_x, tile_y);
@@ -155,6 +167,8 @@ class GameplayScene extends Phaser.Scene {
       test_char = "@";
     } else if (object_ref.template === Model.ActorTemplate.HERON) {
       test_char = "v";
+    } else if (object_ref.template === Model.ActorTemplate.STARLIGHT_FAIRY) {
+      test_char = "f";
     } else if (object_ref.template === Model.ItemTemplate.ORDINARY_STONE) {
       test_char = "*";
     } else if (object_ref.template === Model.ItemTemplate.ORDINARY_SWORD) {
@@ -199,12 +213,12 @@ class GameplayScene extends Phaser.Scene {
         const sprite = this.cell_sprites[x][y];
         if (cell_data.type === Model.CellType.FLOWER_HAZARD) {
           if (cell_data.phase === Model.Phase.ACTIVE) {
-            sprite.setText("F");
+            sprite.setText("O");
           } else if (cell_data.phase === Model.Phase.READY) {
             sprite.setColor("#ff00ff");
           } else { // ===IDLE
             sprite.setColor("#ffffff");
-            sprite.setText("f");
+            sprite.setText("o");
           }
         }
       }

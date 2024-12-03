@@ -49,6 +49,26 @@ test("heron enemy moves vertically", () => {
   }
 });
 
+test("starlight fairy dazzles player at range", () => {
+  const fairy_ref = floor.create_actor(Model.ActorTemplate.STARLIGHT_FAIRY, 3, 1);
+  expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(false);
+
+  game.execute_command(Model.Command.PASS);
+  // Fairy inflicts dazzle at range 2.
+  expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(true);
+
+  // But attacks when adjacent.
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.template.max_hp);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  expect(floor.player_ref.current_hp).toBeLessThan(floor.player_ref.template.max_hp);
+
+  game.execute_command(Model.Command.PASS);
+  game.execute_command(Model.Command.PASS);
+  game.execute_command(Model.Command.PASS);
+  // Condition wears off.
+  expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(false);
+});
+
 test("adjacent enemy attacks player", () => {
   const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
   const initial_hp = floor.player_ref.current_hp;
