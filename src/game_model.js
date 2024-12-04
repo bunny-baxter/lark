@@ -1,3 +1,4 @@
+import {ActorBehavior, ActorTemplate, ItemTemplate} from './content.js';
 import * as Messages from './messages.js';
 import * as Util from './util.js';
 
@@ -15,56 +16,8 @@ export const Phase = Object.freeze({
   ACTIVE: Symbol("ACTIVE"),
 });
 
-export const ActorBehavior = Object.freeze({
-  PLAYER_INPUT: Symbol("PLAYER_INPUT"),
-  PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
-  INFLICT_DAZZLE: Symbol("INFLICT_DAZZLE"),
-});
-
 export const Condition = Object.freeze({
   DAZZLE: Symbol("DAZZLE"),
-});
-
-// TODO: Both template entry types should take a config object, so that properties can have names and optional properties can be omitted.
-// Also maybe move them to another file? Just for organizational purposes.
-
-class ActorTemplateEntry {
-  display_name;
-  attack_verb;
-  behavior;
-  max_hp;
-  starting_attack_power;
-
-  constructor(display_name, attack_verb, behavior, max_hp, starting_attack_power) {
-    this.display_name = display_name;
-    this.attack_verb = attack_verb;
-    this.behavior = behavior;
-    this.max_hp = max_hp;
-    this.starting_attack_power = starting_attack_power
-  }
-}
-
-export const ActorTemplate = Object.freeze({
-  PLAYER: new ActorTemplateEntry("Rogue", "punches", ActorBehavior.PLAYER_INPUT, 12, 1),
-  HERON: new ActorTemplateEntry("heron", "pecks", ActorBehavior.PATROL_VERTICALLY, 4, 1),
-  STARLIGHT_FAIRY: new ActorTemplateEntry("starlight fairy", "scratches", ActorBehavior.INFLICT_DAZZLE, 5, 1),
-});
-
-class ItemTemplateEntry {
-  display_name;
-  equipment_slot;
-  equipped_attack_power;
-
-  constructor(display_name, equipment_slot, equipped_attack_power) {
-    this.display_name = display_name;
-    this.equipment_slot = equipment_slot;
-    this.equipped_attack_power = equipped_attack_power;
-  }
-}
-
-export const ItemTemplate = Object.freeze({
-  ORDINARY_STONE: new ItemTemplateEntry("ordinary stone", null, 0),
-  ORDINARY_SWORD: new ItemTemplateEntry("steel sword", "weapon", 2),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -154,6 +107,7 @@ export class Floor {
   }
 
   create_actor(template, x, y) {
+    console.assert(template !== undefined);
     const actor = new Actor(this.next_id, template);
     actor.tile_x = x;
     actor.tile_y = y;
@@ -241,6 +195,7 @@ export class Floor {
   }
 
   create_item(template, tile_x, tile_y) {
+    console.assert(template !== undefined);
     const item = new Item(this.next_id, template);
     item.tile_x = tile_x;
     item.tile_y = tile_y;
@@ -426,6 +381,8 @@ export class Game {
   }
 
   execute_command(command, opt_param) {
+    console.assert(command !== undefined);
+
     this.messages = [];
 
     if (command === Command.WALK_UP) {

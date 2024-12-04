@@ -1,3 +1,4 @@
+import {ActorTemplate, ItemTemplate} from '../src/content';
 import * as Model from '../src/game_model';
 
 let game;
@@ -41,7 +42,7 @@ test("flower hazard does damage on cycle", () => {
 
 test("heron enemy moves vertically", () => {
   floor.set_cell(3, 4, Model.CellType.DEFAULT_WALL);
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 3, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 3, 1);
   const path = [[3, 2], [3, 3], [3, 3], [3, 2], [3, 1], [3, 1], [3, 2]];
   for (let i = 0; i < path.length; i++) {
     game.execute_command(Model.Command.PASS);
@@ -50,7 +51,7 @@ test("heron enemy moves vertically", () => {
 });
 
 test("starlight fairy dazzles player at range", () => {
-  const fairy_ref = floor.create_actor(Model.ActorTemplate.STARLIGHT_FAIRY, 3, 1);
+  const fairy_ref = floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 3, 1);
   expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(false);
 
   game.execute_command(Model.Command.PASS);
@@ -70,7 +71,7 @@ test("starlight fairy dazzles player at range", () => {
 });
 
 test("adjacent enemy attacks player", () => {
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   const initial_hp = floor.player_ref.current_hp;
   game.execute_command(Model.Command.PASS);
   // Enemy has not moved, and instead attacked the player.
@@ -80,14 +81,14 @@ test("adjacent enemy attacks player", () => {
 });
 
 test("cannot move into other actor's space", () => {
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   game.execute_command(Model.Command.WALK_RIGHT);
   // Player did not move.
   expect([floor.player_ref.tile_x, floor.player_ref.tile_y]).toEqual([1, 1]);
 });
 
 test("player attacks enemy", () => {
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   const initial_hp = heron_ref.current_hp;
   game.execute_command(Model.Command.FIGHT_RIGHT);
   expect(heron_ref.current_hp).toBeLessThan(initial_hp);
@@ -96,7 +97,7 @@ test("player attacks enemy", () => {
 });
 
 test("player defeats enemy", () => {
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   expect(heron_ref.is_dead).toBe(false);
   while (heron_ref.current_hp > 0) {
     game.execute_command(Model.Command.FIGHT_RIGHT);
@@ -106,7 +107,7 @@ test("player defeats enemy", () => {
 });
 
 test("basic item manipulation", () => {
-  const item_ref = floor.create_item(Model.ItemTemplate.ORDINARY_STONE, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.ORDINARY_STONE, 1, 1);
   expect([item_ref.tile_x, item_ref.tile_y]).toEqual([1, 1]);
   expect(item_ref.held_actor).toBe(null);
   expect(floor.player_ref.inventory).toEqual([]);
@@ -129,13 +130,13 @@ test("basic item manipulation", () => {
 });
 
 test("equip sword", () => {
-  const item_ref = floor.create_item(Model.ItemTemplate.ORDINARY_SWORD, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, 1, 1);
   expect(floor.player_ref.attack_power).toBe(1);
   expect(item_ref.equipped).toBe(false);
 
   game.execute_command(Model.Command.GET_ITEM, item_ref);
   game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref);
-  expect(floor.player_ref.attack_power).toBe(1 + Model.ItemTemplate.ORDINARY_SWORD.equipped_attack_power);
+  expect(floor.player_ref.attack_power).toBe(1 + ItemTemplate.ORDINARY_SWORD.equipped_attack_power);
   expect(item_ref.equipped).toBe(true);
 
   game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref);
@@ -144,11 +145,11 @@ test("equip sword", () => {
 });
 
 test("sword increases player's attack power", () => {
-  const sword_ref = floor.create_item(Model.ItemTemplate.ORDINARY_SWORD, 1, 1);
-  const heron_ref = floor.create_actor(Model.ActorTemplate.HERON, 2, 1);
+  const sword_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, 1, 1);
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   const heron_starting_hp = heron_ref.current_hp;
   game.execute_command(Model.Command.GET_ITEM, sword_ref);
   game.execute_command(Model.Command.TOGGLE_EQUIPMENT, sword_ref);
   game.execute_command(Model.Command.FIGHT_RIGHT);
-  expect(heron_ref.current_hp).toBe(heron_starting_hp - (1 + Model.ItemTemplate.ORDINARY_SWORD.equipped_attack_power));
+  expect(heron_ref.current_hp).toBe(heron_starting_hp - (1 + ItemTemplate.ORDINARY_SWORD.equipped_attack_power));
 });

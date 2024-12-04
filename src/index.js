@@ -1,3 +1,4 @@
+import * as Content from './content.js';
 import * as Model from './game_model.js';
 
 const SCREEN_WIDTH = 1024;
@@ -163,15 +164,15 @@ class GameplayScene extends Phaser.Scene {
 
   _create_sprite_for_object(object_ref, is_actor) {
     let test_char = null;
-    if (object_ref.template === Model.ActorTemplate.PLAYER) {
+    if (object_ref.template === Content.ActorTemplate.PLAYER) {
       test_char = "@";
-    } else if (object_ref.template === Model.ActorTemplate.HERON) {
+    } else if (object_ref.template === Content.ActorTemplate.HERON) {
       test_char = "v";
-    } else if (object_ref.template === Model.ActorTemplate.STARLIGHT_FAIRY) {
+    } else if (object_ref.template === Content.ActorTemplate.STARLIGHT_FAIRY) {
       test_char = "f";
-    } else if (object_ref.template === Model.ItemTemplate.ORDINARY_STONE) {
+    } else if (object_ref.template === Content.ItemTemplate.ORDINARY_STONE) {
       test_char = "*";
-    } else if (object_ref.template === Model.ItemTemplate.ORDINARY_SWORD) {
+    } else if (object_ref.template === Content.ItemTemplate.ORDINARY_SWORD) {
       test_char = "/";
     }
     const [screen_x, screen_y] = this._tile_to_screen_coord(object_ref.tile_x, object_ref.tile_y);
