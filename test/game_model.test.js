@@ -153,3 +153,15 @@ test("sword increases player's attack power", () => {
   game.execute_command(Model.Command.FIGHT_RIGHT);
   expect(heron_ref.current_hp).toBe(heron_starting_hp - (1 + ItemTemplate.ORDINARY_SWORD.equipped_attack_power));
 });
+
+test("eating healing herb heals", () => {
+  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, 1, 1);
+  floor.player_ref.current_hp = 1;
+  expect(item_ref.is_destroyed).toBe(false);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.template.max_hp);
+  expect(floor.player_ref.inventory.length).toBe(0);
+  expect(floor.items.indexOf(item_ref)).toBe(-1);
+  expect(item_ref.is_destroyed).toBe(true);
+});

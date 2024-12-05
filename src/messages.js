@@ -25,7 +25,15 @@ export function equip_item(actor_name, item_name, equipment_slot) {
   if (equipment_slot === "weapon") {
     verb = "wields";
   }
-  return `${Util.capitalize(actor_name)} ${verb} ${item_name}.`;
+  return `${Util.capitalize(actor_name)} ${verb} the ${item_name}.`;
+}
+
+export function consume_item_prefix(actor_name, item_name) {
+  return `${Util.capitalize(actor_name)} eats the ${item_name}.`;
+}
+
+export function effect_heals(actor_name) {
+  return `${Util.capitalize(actor_name)}'s hp is restored.`;
 }
 
 export function fairy_inflict_dazzle(actor_name, target_name) {

@@ -174,6 +174,8 @@ class GameplayScene extends Phaser.Scene {
       test_char = "*";
     } else if (object_ref.template === Content.ItemTemplate.ORDINARY_SWORD) {
       test_char = "/";
+    } else if (object_ref.template === Content.ItemTemplate.HEALING_HERB) {
+      test_char = "%";
     }
     const [screen_x, screen_y] = this._tile_to_screen_coord(object_ref.tile_x, object_ref.tile_y);
     const sprite = this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
@@ -304,6 +306,15 @@ class GameplayScene extends Phaser.Scene {
         const item = this.inventory_menu.get_selected_item();
         if (item.template.equipment_slot) {
           this.game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item);
+          this.inventory_menu.destroy();
+          this.inventory_menu = null;
+        }
+      }
+    } else if (event.code === "KeyE") {
+      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+        const item = this.inventory_menu.get_selected_item();
+        if (item.template.consume_effect) {
+          this.game.execute_command(Model.Command.CONSUME_ITEM, item);
           this.inventory_menu.destroy();
           this.inventory_menu = null;
         }

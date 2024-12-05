@@ -48,15 +48,21 @@ export const ActorTemplate = Object.freeze({
 
 });
 
+export const ConsumeItemEffect = Object.freeze({
+  HEAL: Symbol("HEAL"),
+});
+
 class ItemTemplateEntry {
   display_name;
   equipment_slot;
   equipped_attack_power;
+  consume_effect;
 
   constructor(config) {
     this.display_name = config.display_name;
     this.equipment_slot = config.equipment_slot || null;
     this.equipped_attack_power = config.equipped_attack_power || 0;
+    this.consume_effect = config.consume_effect;
   }
 }
 
@@ -72,5 +78,9 @@ export const ItemTemplate = Object.freeze({
     equipped_attack_power: 2,
   }),
 
-});
+  HEALING_HERB: new ItemTemplateEntry({
+    display_name: "healing herb",
+    consume_effect: ConsumeItemEffect.HEAL,
+  }),
 
+});

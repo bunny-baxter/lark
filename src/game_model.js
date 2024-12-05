@@ -1,4 +1,4 @@
-import {ActorBehavior, ActorTemplate, ItemTemplate} from './content.js';
+import {ActorBehavior, ActorTemplate, ConsumeItemEffect, ItemTemplate} from './content.js';
 import * as Messages from './messages.js';
 import * as Util from './util.js';
 
@@ -21,6 +21,7 @@ export const Condition = Object.freeze({
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
+const HEALING_HERB_HEALING_AMOUNT = 20;
 
 export class CellData {
   type = CellType.EMPTY;
@@ -70,6 +71,7 @@ export class Item {
   template;
   tile_x = 0;
   tile_y = 0;
+  is_destroyed = false;
   held_actor = null;
   equipped = false;
 
@@ -146,12 +148,14 @@ export class Floor {
     return true;
   }
 
-  _hurt_actor(actor, n_damage) {
-    actor.current_hp -= n_damage;
+  _change_actor_hp(actor, delta) {
+    actor.current_hp += delta;
     if (actor.current_hp <= 0) {
       actor.is_dead = true;
       Util.remove_first(this.actors, actor);
       this.parent_game.add_message(Messages.die(actor.template.display_name));
+    } else if (actor.current_hp > actor.template.max_hp) {
+      actor.current_hp = actor.template.max_hp;
     }
   }
 
@@ -163,7 +167,7 @@ export class Floor {
     // TODO: Change message based on wielded weapon.
     this.parent_game.add_message(Messages.fight(
       attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
-    this._hurt_actor(defender_ref, attacker_ref.attack_power);
+    this._change_actor_hp(defender_ref, -1 * attacker_ref.attack_power);
   }
 
   actor_fight(actor_ref, delta_x, delta_y) {
@@ -232,6 +236,23 @@ export class Floor {
     }
   }
 
+  player_consume_item(item_ref) {
+    console.assert(item_ref.held_actor === this.player_ref);
+    console.assert(item_ref.template.consume_effect !== undefined);
+
+    let message = Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.template.display_name);
+
+    if (item_ref.template.consume_effect === ConsumeItemEffect.HEAL) {
+      message += ` ${Messages.effect_heals(this.player_ref.template.display_name)}`;
+      this._change_actor_hp(this.player_ref, HEALING_HERB_HEALING_AMOUNT);
+    }
+
+    this.parent_game.add_message(message);
+    item_ref.is_destroyed = true;
+    Util.remove_first(this.items, item_ref);
+    Util.remove_first(this.player_ref.inventory, item_ref);
+  }
+
   is_out_of_bounds(x, y) {
     return x < 0 || y < 0 || x >= this.size_tiles.w || y >= this.size_tiles.h;
   }
@@ -264,7 +285,7 @@ export class Floor {
         cell_data.phase = Phase.ACTIVE;
         for (const actor of this.find_actors_at(x, y)) {
           this.parent_game.add_message(Messages.flower_hit(actor.template.display_name));
-          this._hurt_actor(actor, 1);
+          this._change_actor_hp(actor, -1);
         }
       } else if (mod === FLOWER_HAZARD_CYCLE_LENGTH - 2) {
         cell_data.phase = Phase.READY;
@@ -351,6 +372,7 @@ export const Command = Object.freeze({
   GET_ITEM: Symbol("GET_ITEM"),
   DROP_ITEM: Symbol("DROP_ITEM"),
   TOGGLE_EQUIPMENT: Symbol("TOGGLE_EQUIPMENT"),
+  CONSUME_ITEM: Symbol("CONSUME_ITEM"),
 });
 
 export class Game {
@@ -372,7 +394,7 @@ export class Game {
     this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 5, 5);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, 2, 2);
-    this.current_floor.create_item(ItemTemplate.ORDINARY_STONE, 3, 2);
+    this.current_floor.create_item(ItemTemplate.HEALING_HERB, 3, 2);
   }
 
   _end_player_turn() {
@@ -410,6 +432,9 @@ export class Game {
     } else if (command === Command.TOGGLE_EQUIPMENT) {
       console.assert(opt_param !== undefined);
       this.current_floor.player_toggle_equipment(opt_param);
+    } else if (command === Command.CONSUME_ITEM) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_consume_item(opt_param);
     }
 
     this._end_player_turn();
