@@ -107,7 +107,7 @@ test("player defeats enemy", () => {
 });
 
 test("basic item manipulation", () => {
-  const item_ref = floor.create_item(ItemTemplate.ORDINARY_STONE, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.ORDINARY_STONE, Model.Beatitude.NEUTRAL, 1, 1);
   expect([item_ref.tile_x, item_ref.tile_y]).toEqual([1, 1]);
   expect(item_ref.held_actor).toBe(null);
   expect(floor.player_ref.inventory).toEqual([]);
@@ -130,7 +130,7 @@ test("basic item manipulation", () => {
 });
 
 test("equip sword", () => {
-  const item_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.NEUTRAL, 1, 1);
   expect(floor.player_ref.attack_power).toBe(1);
   expect(item_ref.equipped).toBe(false);
 
@@ -145,7 +145,7 @@ test("equip sword", () => {
 });
 
 test("sword increases player's attack power", () => {
-  const sword_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, 1, 1);
+  const sword_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.NEUTRAL, 1, 1);
   const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
   const heron_starting_hp = heron_ref.current_hp;
   game.execute_command(Model.Command.GET_ITEM, sword_ref);
@@ -155,7 +155,7 @@ test("sword increases player's attack power", () => {
 });
 
 test("eating healing herb heals", () => {
-  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.NEUTRAL, 1, 1);
   floor.player_ref.current_hp = 1;
   expect(item_ref.is_destroyed).toBe(false);
   game.execute_command(Model.Command.GET_ITEM, item_ref);

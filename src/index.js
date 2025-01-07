@@ -69,7 +69,7 @@ class UiSprites {
 }
 
 function get_item_description(item) {
-  let description = item.template.display_name;
+  let description = item.get_name();
   if (item.equipped) {
     description += " (equipped)";
   }

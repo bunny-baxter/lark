@@ -66,18 +66,37 @@ export class Actor {
   }
 }
 
+export const Beatitude = Object.freeze({
+  CURSED: Symbol("CURSED"),
+  NEUTRAL: Symbol("NEUTRAL"),
+  BLESSED: Symbol("BLESSED"),
+});
+
 export class Item {
   id;
   template;
+  beatitude;
+
   tile_x = 0;
   tile_y = 0;
   is_destroyed = false;
   held_actor = null;
   equipped = false;
 
-  constructor(id, template) {
+  constructor(id, template, beatitude) {
     this.id = id;
     this.template = template;
+    this.beatitude = beatitude;
+  }
+
+  get_name() {
+    let beatitude_prefix = "neutral";
+    if (this.beatitude === Beatitude.CURSED) {
+      beatitude_prefix = "cursed";
+    } else if (this.beatitude === Beatitude.BLESSED) {
+      beatitude_prefix = "blessed";
+    }
+    return `${beatitude_prefix} ${this.template.display_name}`
   }
 }
 
@@ -198,9 +217,9 @@ export class Floor {
     return result;
   }
 
-  create_item(template, tile_x, tile_y) {
+  create_item(template, beatitude, tile_x, tile_y) {
     console.assert(template !== undefined);
-    const item = new Item(this.next_id, template);
+    const item = new Item(this.next_id, template, beatitude);
     item.tile_x = tile_x;
     item.tile_y = tile_y;
     this.next_id += 1;
@@ -212,7 +231,7 @@ export class Floor {
     console.assert(item_ref.held_actor === null);
     console.assert(item_ref.tile_x === this.player_ref.tile_x && item_ref.tile_y === this.player_ref.tile_y);
 
-    this.parent_game.add_message(Messages.get_item(this.player_ref.template.display_name, item_ref.template.display_name));
+    this.parent_game.add_message(Messages.get_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = this.player_ref;
     this.player_ref.inventory.push(item_ref);
   }
@@ -220,14 +239,14 @@ export class Floor {
   player_drop_item(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
 
-    this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.template.display_name));
+    this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = null;
     Util.remove_first(this.player_ref.inventory, item_ref);
   }
 
   player_toggle_equipment(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
-    this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.template.display_name, item_ref.template.equipment_slot));
+    this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
     item_ref.equipped = !item_ref.equipped;
     if (item_ref.equipped) {
       this.player_ref.attack_power += item_ref.template.equipped_attack_power;
@@ -240,7 +259,7 @@ export class Floor {
     console.assert(item_ref.held_actor === this.player_ref);
     console.assert(item_ref.template.consume_effect !== undefined);
 
-    let message = Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.template.display_name);
+    let message = Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name());
 
     if (item_ref.template.consume_effect === ConsumeItemEffect.HEAL) {
       message += ` ${Messages.effect_heals(this.player_ref.template.display_name)}`;
@@ -388,13 +407,20 @@ export class Game {
   populate_test_level() {
     this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
+    this.current_floor.set_cell(5, 5, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
 
-    this.current_floor.create_actor(ActorTemplate.HERON, 3, 1);
-    this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 5, 5);
+    this.current_floor.create_actor(ActorTemplate.HERON, 5, 1);
+    this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 4, 5);
 
-    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, 2, 2);
-    this.current_floor.create_item(ItemTemplate.HEALING_HERB, 3, 2);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 1, 2);
+    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.NEUTRAL, 2, 2);
+
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.CURSED, 1, 3);
+    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.CURSED, 2, 3);
+
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.BLESSED, 1, 4);
+    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.BLESSED, 2, 4);
   }
 
   _end_player_turn() {
