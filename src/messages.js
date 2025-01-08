@@ -28,6 +28,14 @@ export function equip_item(actor_name, item_name, equipment_slot) {
   return `${Util.capitalize(actor_name)} ${verb} the ${item_name}.`;
 }
 
+export function unequip_item(actor_name, item_name, equipment_slot) {
+  let verb = "removes";
+  if (equipment_slot === "weapon") {
+    verb = "puts away";
+  }
+  return `${Util.capitalize(actor_name)} ${verb} the ${item_name}.`;
+}
+
 export function consume_item_prefix(actor_name, item_name) {
   return `${Util.capitalize(actor_name)} eats the ${item_name}.`;
 }

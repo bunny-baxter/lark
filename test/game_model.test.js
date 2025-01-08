@@ -144,6 +144,21 @@ test("equip sword", () => {
   expect(item_ref.equipped).toBe(false);
 });
 
+test("swap sword with another sword", () => {
+  const item_ref1 = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.NEUTRAL, 1, 1);
+  const item_ref2 = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref2);
+
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref1);
+  expect(item_ref1.equipped).toBe(true);
+  expect(item_ref2.equipped).toBe(false);
+
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref2);
+  expect(item_ref1.equipped).toBe(false);
+  expect(item_ref2.equipped).toBe(true);
+});
+
 test("sword increases player's attack power", () => {
   const sword_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.NEUTRAL, 1, 1);
   const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);

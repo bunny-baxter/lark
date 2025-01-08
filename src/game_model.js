@@ -246,12 +246,25 @@ export class Floor {
 
   player_toggle_equipment(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
-    this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
-    item_ref.equipped = !item_ref.equipped;
+
     if (item_ref.equipped) {
-      this.player_ref.attack_power += item_ref.template.equipped_attack_power;
-    } else {
+      this.parent_game.add_message(Messages.unequip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
+      item_ref.equipped = false;
       this.player_ref.attack_power -= item_ref.template.equipped_attack_power;
+    } else {
+      let old_item = null;
+      for (const other_item of this.player_ref.inventory) {
+        if (other_item.equipped && other_item.template.equipment_slot === item_ref.template.equipment_slot) {
+          old_item = other_item;
+          break;
+        }
+      }
+      if (old_item) {
+        this.player_toggle_equipment(old_item);
+      }
+      this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
+      item_ref.equipped = true;
+      this.player_ref.attack_power += item_ref.template.equipped_attack_power;
     }
   }
 
