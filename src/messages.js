@@ -44,6 +44,14 @@ export function effect_heals(actor_name) {
   return `${Util.capitalize(actor_name)}'s hp is restored.`;
 }
 
+export function effect_cursed_herb(actor_name) {
+  return `The curse drains ${actor_name}'s hp.`;
+}
+
+export function effect_gain_max_hp(actor_name) {
+  return `${Util.capitalize(actor_name)} feels hearty.`;
+}
+
 export function fairy_inflict_dazzle(actor_name, target_name) {
   return `${Util.capitalize(actor_name)} dazzles ${target_name} with fairy lights.`;
 }

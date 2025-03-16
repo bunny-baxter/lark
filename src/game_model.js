@@ -21,7 +21,9 @@ export const Condition = Object.freeze({
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
-const HEALING_HERB_HEALING_AMOUNT = 20;
+const HEALING_HERB_NEUTRAL_HEALING_AMOUNT = 20;
+export const HEALING_HERB_BLESSED_MAX_HP_BONUS = 2;
+export const HEALING_HERB_CURSED_DAMAGE_AMOUNT = 10;
 
 export class CellData {
   type = CellType.EMPTY;
@@ -47,6 +49,7 @@ export class Actor {
     this.id = id;
     this.template = template;
 
+    this.max_hp = template.max_hp;
     this.current_hp = template.max_hp;
     this.attack_power = template.starting_attack_power;
     // Only the player has an inventory for now.
@@ -173,8 +176,8 @@ export class Floor {
       actor.is_dead = true;
       Util.remove_first(this.actors, actor);
       this.parent_game.add_message(Messages.die(actor.template.display_name));
-    } else if (actor.current_hp > actor.template.max_hp) {
-      actor.current_hp = actor.template.max_hp;
+    } else if (actor.current_hp > actor.max_hp) {
+      actor.current_hp = actor.max_hp;
     }
   }
 
@@ -275,8 +278,19 @@ export class Floor {
     let message = Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name());
 
     if (item_ref.template.consume_effect === ConsumeItemEffect.HEAL) {
-      message += ` ${Messages.effect_heals(this.player_ref.template.display_name)}`;
-      this._change_actor_hp(this.player_ref, HEALING_HERB_HEALING_AMOUNT);
+      if (item_ref.beatitude === Beatitude.CURSED) {
+        message += ` ${Messages.effect_cursed_herb(this.player_ref.template.display_name)}`;
+        this._change_actor_hp(this.player_ref, -1 * HEALING_HERB_CURSED_DAMAGE_AMOUNT);
+      } else {
+        if (item_ref.beatitude === Beatitude.BLESSED) {
+          this.player_ref.max_hp += HEALING_HERB_BLESSED_MAX_HP_BONUS;
+        }
+        message += ` ${Messages.effect_heals(this.player_ref.template.display_name)}`;
+        this._change_actor_hp(this.player_ref, HEALING_HERB_NEUTRAL_HEALING_AMOUNT);
+        if (item_ref.beatitude === Beatitude.BLESSED) {
+          message += ` ${Messages.effect_gain_max_hp(this.player_ref.template.display_name)}`;
+        }
+      }
     }
 
     this.parent_game.add_message(message);

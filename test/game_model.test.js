@@ -59,9 +59,9 @@ test("starlight fairy dazzles player at range", () => {
   expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(true);
 
   // But attacks when adjacent.
-  expect(floor.player_ref.current_hp).toBe(floor.player_ref.template.max_hp);
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp);
   game.execute_command(Model.Command.WALK_RIGHT);
-  expect(floor.player_ref.current_hp).toBeLessThan(floor.player_ref.template.max_hp);
+  expect(floor.player_ref.current_hp).toBeLessThan(floor.player_ref.max_hp);
 
   game.execute_command(Model.Command.PASS);
   game.execute_command(Model.Command.PASS);
@@ -175,8 +175,24 @@ test("eating healing herb heals", () => {
   expect(item_ref.is_destroyed).toBe(false);
   game.execute_command(Model.Command.GET_ITEM, item_ref);
   game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
-  expect(floor.player_ref.current_hp).toBe(floor.player_ref.template.max_hp);
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp);
   expect(floor.player_ref.inventory.length).toBe(0);
   expect(floor.items.indexOf(item_ref)).toBe(-1);
   expect(item_ref.is_destroyed).toBe(true);
+});
+
+test("eating blessed healing herb adds max hp", () => {
+  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.BLESSED, 1, 1);
+  const initial_max_hp = floor.player_ref.max_hp;
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
+  expect(floor.player_ref.max_hp).toBe(initial_max_hp + Model.HEALING_HERB_BLESSED_MAX_HP_BONUS);
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp);
+});
+
+test("eating cursed healing herb hurts", () => {
+  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.CURSED, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
+  expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp - Model.HEALING_HERB_CURSED_DAMAGE_AMOUNT);
 });
