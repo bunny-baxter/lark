@@ -455,6 +455,34 @@ export class Game {
     this.current_floor.do_end_of_turn();
   }
 
+  execute_walk_or_fight(delta_x, delta_y) {
+    console.assert((Math.abs(delta_x) === 1 && delta_y === 0) || (delta_x === 0 && Math.abs(delta_y) === 1));
+    const player_ref = this.current_floor.player_ref;
+    const next_x = player_ref.tile_x + delta_x;
+    const next_y = player_ref.tile_y + delta_y;
+    if (this.current_floor.find_actors_at(next_x, next_y).length > 0) {
+      if (delta_x === 1 && delta_y === 0) {
+        this.execute_command(Command.FIGHT_RIGHT);
+      } else if (delta_x === -1 && delta_y === 0) {
+        this.execute_command(Command.FIGHT_LEFT);
+      } else if (delta_x === 0 && delta_y === 1) {
+        this.execute_command(Command.FIGHT_DOWN);
+      } else if (delta_x === 0 && delta_y === -1) {
+        this.execute_command(Command.FIGHT_UP);
+      }
+    } else {
+      if (delta_x === 1 && delta_y === 0) {
+        this.execute_command(Command.WALK_RIGHT);
+      } else if (delta_x === -1 && delta_y === 0) {
+        this.execute_command(Command.WALK_LEFT);
+      } else if (delta_x === 0 && delta_y === 1) {
+        this.execute_command(Command.WALK_DOWN);
+      } else if (delta_x === 0 && delta_y === -1) {
+        this.execute_command(Command.WALK_UP);
+      }
+    }
+  }
+
   execute_command(command, opt_param) {
     console.assert(command !== undefined);
 

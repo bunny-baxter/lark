@@ -1,5 +1,5 @@
-import * as Content from './content.js';
 import * as Model from './game_model.js';
+import * as UiShared from './ui_shared.js';
 
 const SCREEN_WIDTH = 1024;
 const SCREEN_HEIGHT = 576;
@@ -24,10 +24,17 @@ const PLACEHOLDER_SPRITE_STYLE = Object.freeze({
   backgroundColor: '#000000',
 });
 
+const Colors = Object.freeze({
+  [UiShared.BasicColor.WHITE]: "#ffffff",
+  [UiShared.BasicColor.YELLOW]: "#ffff00",
+  [UiShared.BasicColor.GRAY]: "#88aa88",
+  [UiShared.BasicColor.MAGENTA]: "#ff00ff",
+});
+
 const GRID_OFFSET_X = 128;
 const GRID_OFFSET_Y = 64;
 
-const CONDITION_LABELS = Object.freeze({
+const ConditionLabels = Object.freeze({
   [Model.Condition.DAZZLE]: "dazzled",
 });
 
@@ -62,7 +69,7 @@ class UiSprites {
 
     let conditions_text = "";
     for (const condition of game.current_floor.player_ref.conditions.keys()) {
-      conditions_text += `${CONDITION_LABELS[condition]} `;
+      conditions_text += `${ConditionLabels[condition]} `;
     }
     this.conditions_label.setText(conditions_text);
   }
@@ -107,14 +114,14 @@ class InventoryMenu {
     if (this.is_empty) {
       return;
     }
-    this.sprites[this.cursor_index].setColor("#ffffff");
+    this.sprites[this.cursor_index].setColor(Colors[UiShared.BasicColor.WHITE]);
     this.cursor_index += delta;
     if (this.cursor_index < 0) {
       this.cursor_index += this.item_list.length;
     } else if (this.cursor_index >= this.item_list.length) {
       this.cursor_index -= this.item_list.length;
     }
-    this.sprites[this.cursor_index].setColor("#ffff00");
+    this.sprites[this.cursor_index].setColor(Colors[UiShared.BasicColor.YELLOW]);
   }
 
   get_selected_item() {
@@ -147,40 +154,22 @@ class GameplayScene extends Phaser.Scene {
   }
 
   _create_sprite_for_cell(tile_x, tile_y, cell_type) {
-    let test_char = null;
-    if (cell_type === Model.CellType.FLOOR) {
-      test_char = ".";
-    } else if (cell_type === Model.CellType.DEFAULT_WALL) {
-      test_char = "#";
-    } else if (cell_type === Model.CellType.FLOWER_HAZARD) {
-      test_char = "o";
-    };
-    if (test_char) {
+    const visual = UiShared.get_visual_for_cell_type(cell_type);
+    if (visual.character) {
       const [screen_x, screen_y] = this._tile_to_screen_coord(tile_x, tile_y);
-      return this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
+      const sprite = this.add.text(screen_x, screen_y, visual.character, PLACEHOLDER_SPRITE_STYLE);
+      sprite.setColor(Colors[visual.color]);
+      return sprite;
     }
     return null;
   }
 
   _create_sprite_for_object(object_ref, is_actor) {
-    let test_char = null;
-    if (object_ref.template === Content.ActorTemplate.PLAYER) {
-      test_char = "@";
-    } else if (object_ref.template === Content.ActorTemplate.HERON) {
-      test_char = "v";
-    } else if (object_ref.template === Content.ActorTemplate.STARLIGHT_FAIRY) {
-      test_char = "f";
-    } else if (object_ref.template === Content.ItemTemplate.ORDINARY_STONE) {
-      test_char = "*";
-    } else if (object_ref.template === Content.ItemTemplate.ORDINARY_SWORD) {
-      test_char = "/";
-    } else if (object_ref.template === Content.ItemTemplate.HEALING_HERB) {
-      test_char = "%";
-    }
+    const visual = is_actor ? UiShared.get_visual_for_actor(object_ref.template) : UiShared.get_visual_for_item(object_ref.template);
     const [screen_x, screen_y] = this._tile_to_screen_coord(object_ref.tile_x, object_ref.tile_y);
-    const sprite = this.add.text(screen_x, screen_y, test_char, PLACEHOLDER_SPRITE_STYLE);
+    const sprite = this.add.text(screen_x, screen_y, visual.character, PLACEHOLDER_SPRITE_STYLE);
     sprite.setDepth(is_actor ? ACTOR_DEPTH : ITEM_DEPTH);
-    sprite.setColor(is_actor ? "#ffff00" : "#88aa88");
+    sprite.setColor(Colors[visual.color]);
     return sprite;
   }
 
@@ -218,9 +207,9 @@ class GameplayScene extends Phaser.Scene {
           if (cell_data.phase === Model.Phase.ACTIVE) {
             sprite.setText("O");
           } else if (cell_data.phase === Model.Phase.READY) {
-            sprite.setColor("#ff00ff");
+            sprite.setColor(Colors[UiShared.BasicColor.MAGENTA]);
           } else { // ===IDLE
-            sprite.setColor("#ffffff");
+            sprite.setColor(Colors[UiShared.BasicColor.WHITE]);
             sprite.setText("o");
           }
         }
@@ -242,39 +231,27 @@ class GameplayScene extends Phaser.Scene {
     this.ui_sprites.update(this.game);
   }
 
-  _execute_walk_or_fight(walk_command, fight_command, delta_x, delta_y) {
-    console.assert(delta_x !== 0 || delta_y !== 0);
-    const player_ref = this.game.current_floor.player_ref;
-    const next_x = player_ref.tile_x + delta_x;
-    const next_y = player_ref.tile_y + delta_y;
-    if (this.game.current_floor.find_actors_at(next_x, next_y).length > 0) {
-      this.game.execute_command(fight_command);
-    } else {
-      this.game.execute_command(walk_command);
-    }
-  }
-
   on_key_down(event) {
     // TODO: Should have separate functions to handle keypresses for menu vs. gameplay probably, since all the if(inventory_menu) blocks here are getting messy.
     if (event.code === "KeyH" || event.code === "ArrowLeft") {
       if (!this.inventory_menu) {
-        this._execute_walk_or_fight(Model.Command.WALK_LEFT, Model.Command.FIGHT_LEFT, -1, 0);
+        this.game.execute_walk_or_fight(-1, 0);
       }
     } else if (event.code === "KeyJ" || event.code === "ArrowDown") {
       if (this.inventory_menu) {
         this.inventory_menu.move_cursor(1);
       } else {
-        this._execute_walk_or_fight(Model.Command.WALK_DOWN, Model.Command.FIGHT_DOWN, 0, 1);
+        this.game.execute_walk_or_fight(0, 1);
       }
     } else if (event.code === "KeyK" || event.code === "ArrowUp") {
       if (this.inventory_menu) {
         this.inventory_menu.move_cursor(-1);
       } else {
-        this._execute_walk_or_fight(Model.Command.WALK_UP, Model.Command.FIGHT_UP, 0, -1);
+        this.game.execute_walk_or_fight(0, -1);
       }
     } else if (event.code === "KeyL" || event.code === "ArrowRight") {
       if (!this.inventory_menu) {
-        this._execute_walk_or_fight(Model.Command.WALK_RIGHT, Model.Command.FIGHT_RIGHT, 1, 0);
+        this.game.execute_walk_or_fight(1, 0);
       }
     } else if (event.code === "Period") {
       if (!this.inventory_menu) {
