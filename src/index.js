@@ -61,11 +61,7 @@ class UiSprites {
     const player_ref = game.current_floor.player_ref;
     this.health_label.setText(`HP: ${player_ref.current_hp}`);
 
-    let messages_text = "";
-    for (const message of game.get_messages()) {
-      messages_text += ` - ${message}\n`;
-    }
-    this.messages_label.setText(messages_text);
+    this.messages_label.setText(UiShared.format_messages(game));
 
     let conditions_text = "";
     for (const condition of game.current_floor.player_ref.conditions.keys()) {

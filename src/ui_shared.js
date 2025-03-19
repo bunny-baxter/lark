@@ -51,3 +51,12 @@ function get_char_for_cell_type(cell_type) {
 export function get_visual_for_cell_type(cell_type) {
   return new CellVisual(get_char_for_cell_type(cell_type), BasicColor.WHITE);
 }
+
+
+export function format_messages(game) {
+  let messages_text = "";
+  for (const message of game.get_messages()) {
+    messages_text += ` - ${message}\n`;
+  }
+  return messages_text;
+}

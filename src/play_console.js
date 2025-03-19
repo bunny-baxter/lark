@@ -41,21 +41,24 @@ const ColorChars = Object.freeze({
 
 
 function update() {
-  terminal.moveTo(1, 1);
-  let screen_string = ""
+  terminal.clear();
+
   for (let y = 0; y < game.current_floor.size_tiles.h; y++) {
+    let line_string = ""
     for (let x = 0; x < game.current_floor.size_tiles.w; x++) {
       const visual = get_visual_for_cell(x, y);
       let c = visual.character;
       if (visual.color !== UiShared.BasicColor.WHITE) {
         c = `^${ColorChars[visual.color]}${c}^`;
       }
-      screen_string += c;
-      screen_string += " ";
+      line_string += c;
+      line_string += " ";
     }
-    screen_string += "\n";
+    terminal.moveTo(2, y + 2, line_string);
   }
-  terminal(screen_string);
+
+  terminal.moveTo(1, 1).wrapColumn({ x: 24, y: 4, width: 48 });
+  terminal.wrap(UiShared.format_messages(game));
 }
 
 
