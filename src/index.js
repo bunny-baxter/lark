@@ -34,10 +34,6 @@ const Colors = Object.freeze({
 const GRID_OFFSET_X = 128;
 const GRID_OFFSET_Y = 64;
 
-const ConditionLabels = Object.freeze({
-  [Model.Condition.DAZZLE]: "dazzled",
-});
-
 class UiSprites {
   health_label;
   messages_label;
@@ -60,14 +56,8 @@ class UiSprites {
   update(game) {
     const player_ref = game.current_floor.player_ref;
     this.health_label.setText(`HP: ${player_ref.current_hp}`);
-
     this.messages_label.setText(UiShared.format_messages(game));
-
-    let conditions_text = "";
-    for (const condition of game.current_floor.player_ref.conditions.keys()) {
-      conditions_text += `${ConditionLabels[condition]} `;
-    }
-    this.conditions_label.setText(conditions_text);
+    this.conditions_label.setText(UiShared.format_conditions(game));
   }
 }
 

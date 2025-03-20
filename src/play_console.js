@@ -53,7 +53,7 @@ class InventoryMenu {
   }
 
   update_terminal() {
-    terminal.moveTo(1, 12).wrapColumn({ x: 24, width: 48 });
+    terminal.moveTo(1, 12).wrapColumn({ x: 21, width: 58 });
 
     if (this.is_empty) {
       terminal.wrap("Inventory is empty.");
@@ -108,10 +108,14 @@ function update_terminal() {
     terminal.moveTo(2, y + 2, line_string.join(""));
   }
 
-  terminal.moveTo(1, 2).wrapColumn({ x: 24, width: 48 });
+  terminal.moveTo(1, 2).wrapColumn({ x: 21, width: 58 });
   terminal.wrap(UiShared.format_messages(game));
 
   terminal.moveTo(1, 12, `HP: ${game.current_floor.player_ref.current_hp}`);
+  const conditions_text = UiShared.format_conditions(game);
+  if (conditions_text) {
+    terminal.moveTo(1, 13, conditions_text);
+  }
 
   if (inventory_menu) {
     inventory_menu.update_terminal();
@@ -130,6 +134,8 @@ function handle_key_normal(name) {
     game.execute_walk_or_fight(0, -1);
   } else if (name === "l" || name === "RIGHT") {
     game.execute_walk_or_fight(1, 0);
+  } else if (name === ".") {
+    game.execute_command(Model.Command.PASS);
   } else if (name === "g" || name === ",") {
     game.execute_get_first_item();
   } else if (name === "i") {
@@ -145,6 +151,27 @@ function handle_key_inventory(name) {
     inventory_menu.move_cursor(-1);
   } else if (name === "i" || name === "ESCAPE") {
     inventory_menu = null;
+  } else if (name === "d") {
+    if (!inventory_menu.is_empty) {
+      game.execute_command(Model.Command.DROP_ITEM, inventory_menu.get_selected_item());
+      inventory_menu = null;
+    }
+  } else if (name === "w") {
+    if (!inventory_menu.is_empty) {
+      const item = inventory_menu.get_selected_item();
+      if (item.template.equipment_slot) {
+        game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item);
+        inventory_menu = null;
+      }
+    }
+  } else if (name === "e") {
+    if (!inventory_menu.is_empty) {
+      const item = inventory_menu.get_selected_item();
+      if (item.template.consume_effect) {
+        game.execute_command(Model.Command.CONSUME_ITEM, item);
+        inventory_menu = null;
+      }
+    }
   }
 }
 

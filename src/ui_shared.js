@@ -9,6 +9,10 @@ export const BasicColor = Object.freeze({
   MAGENTA: Symbol("MAGENTA"),
 });
 
+const ConditionLabels = Object.freeze({
+  [Model.Condition.DAZZLE]: "dazzled",
+});
+
 export class CellVisual {
   constructor(character, color) {
     this.character = character;
@@ -52,6 +56,14 @@ export function get_visual_for_cell_type(cell_type) {
   return new CellVisual(get_char_for_cell_type(cell_type), BasicColor.WHITE);
 }
 
+
+export function format_conditions(game) {
+  const conditions_text = [];
+  for (const condition of game.current_floor.player_ref.conditions.keys()) {
+    conditions_text.push(ConditionLabels[condition]);
+  }
+  return conditions_text.join(" ");
+}
 
 export function format_messages(game) {
   const messages = [];
