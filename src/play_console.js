@@ -27,11 +27,24 @@ function get_visual_for_cell(x, y) {
   if (actors.length) {
     return UiShared.get_visual_for_actor(actors[0].template);
   }
+
   const items = game.current_floor.find_loose_items_at(x, y);
   if (items.length) {
     return UiShared.get_visual_for_item(items[0].template);
   }
-  return UiShared.get_visual_for_cell_type(game.current_floor.get_cell_type(x, y));
+
+  const cell_data = game.current_floor.cells[x][y];
+  const default_visual = UiShared.get_visual_for_cell_type(cell_data.type);
+  if (cell_data.type === Model.CellType.FLOWER_HAZARD) {
+    if (cell_data.phase === Model.Phase.ACTIVE) {
+      return new UiShared.CellVisual(UiShared.FLOWER_HAZARD_ACTIVE_CHAR, UiShared.BasicColor.MAGENTA);
+    }
+    if (cell_data.phase === Model.Phase.READY) {
+      return new UiShared.CellVisual(default_visual.character, UiShared.BasicColor.MAGENTA);
+    }
+    // Fallthrough when ===IDLE.
+  }
+  return default_visual;
 }
 
 
@@ -39,6 +52,7 @@ const ColorChars = Object.freeze({
   [UiShared.BasicColor.WHITE]: "W",
   [UiShared.BasicColor.YELLOW]: "Y",
   [UiShared.BasicColor.GRAY]: "c",
+  [UiShared.BasicColor.MAGENTA]: "M",
 });
 
 

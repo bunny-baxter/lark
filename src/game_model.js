@@ -437,7 +437,7 @@ export class Game {
     this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(5, 5, CellType.DEFAULT_WALL);
-    this.current_floor.set_cell(1, 4, CellType.FLOWER_HAZARD);
+    this.current_floor.set_cell(4, 1, CellType.FLOWER_HAZARD);
 
     this.current_floor.create_actor(ActorTemplate.HERON, 5, 1);
     this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 4, 5);

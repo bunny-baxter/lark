@@ -45,7 +45,9 @@ export function get_visual_for_item(template) {
 }
 
 
-function get_char_for_cell_type(cell_type) {
+export const FLOWER_HAZARD_ACTIVE_CHAR = get_char_for_cell_type(Model.CellType.FLOWER_HAZARD).toUpperCase();
+
+export function get_char_for_cell_type(cell_type) {
   if (cell_type === Model.CellType.FLOOR) return ".";
   if (cell_type === Model.CellType.DEFAULT_WALL) return "#";
   if (cell_type === Model.CellType.FLOWER_HAZARD) return "f";

@@ -183,12 +183,12 @@ class GameplayScene extends Phaser.Scene {
         const sprite = this.cell_sprites[x][y];
         if (cell_data.type === Model.CellType.FLOWER_HAZARD) {
           if (cell_data.phase === Model.Phase.ACTIVE) {
-            sprite.setText("O");
+            sprite.setText(UiShared.FLOWER_HAZARD_ACTIVE_CHAR);
           } else if (cell_data.phase === Model.Phase.READY) {
             sprite.setColor(Colors[UiShared.BasicColor.MAGENTA]);
           } else { // ===IDLE
             sprite.setColor(Colors[UiShared.BasicColor.WHITE]);
-            sprite.setText("o");
+            sprite.setText(UiShared.get_char_for_cell_type(Model.CellType.FLOWER_HAZARD));
           }
         }
       }
