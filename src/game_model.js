@@ -242,6 +242,7 @@ export class Floor {
   player_drop_item(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
 
+    // TODO: Unequip item before dropping.
     this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = null;
     Util.remove_first(this.player_ref.inventory, item_ref);

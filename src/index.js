@@ -219,72 +219,67 @@ class GameplayScene extends Phaser.Scene {
     this.ui_sprites.update(this.game);
   }
 
-  on_key_down(event) {
-    // TODO: Should have separate functions to handle keypresses for menu vs. gameplay probably, since all the if(inventory_menu) blocks here are getting messy.
-    if (event.code === "KeyH" || event.code === "ArrowLeft") {
-      if (!this.inventory_menu) {
-        this.game.execute_walk_or_fight(-1, 0);
-      }
-    } else if (event.code === "KeyJ" || event.code === "ArrowDown") {
-      if (this.inventory_menu) {
-        this.inventory_menu.move_cursor(1);
-      } else {
-        this.game.execute_walk_or_fight(0, 1);
-      }
-    } else if (event.code === "KeyK" || event.code === "ArrowUp") {
-      if (this.inventory_menu) {
-        this.inventory_menu.move_cursor(-1);
-      } else {
-        this.game.execute_walk_or_fight(0, -1);
-      }
-    } else if (event.code === "KeyL" || event.code === "ArrowRight") {
-      if (!this.inventory_menu) {
-        this.game.execute_walk_or_fight(1, 0);
-      }
-    } else if (event.code === "Period") {
-      if (!this.inventory_menu) {
-        this.game.execute_command(Model.Command.PASS);
-      }
-    } else if (event.code === "KeyI") {
-      if (this.inventory_menu) {
-        this.inventory_menu.destroy();
-        this.inventory_menu = null;
-      } else {
-        this.inventory_menu = new InventoryMenu(this, this.game.current_floor.player_ref.inventory, 500, 200);
-      }
-    } else if (event.code === "KeyG" || event.code === "Comma") {
-      if (!this.inventory_menu) {
-        game.execute_get_first_item();
-      }
-    } else if (event.code === "KeyD") {
-      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+  handle_key_normal(key_code) {
+    if (key_code === "KeyH" || key_code === "ArrowLeft") {
+      this.game.execute_walk_or_fight(-1, 0);
+    } else if (key_code === "KeyJ" || key_code === "ArrowDown") {
+      this.game.execute_walk_or_fight(0, 1);
+    } else if (key_code === "KeyK" || key_code === "ArrowUp") {
+      this.game.execute_walk_or_fight(0, -1);
+    } else if (key_code === "KeyL" || key_code === "ArrowRight") {
+      this.game.execute_walk_or_fight(1, 0);
+    } else if (key_code === "Period") {
+      this.game.execute_command(Model.Command.PASS);
+    } else if (key_code === "KeyI") {
+      this.inventory_menu = new InventoryMenu(this, this.game.current_floor.player_ref.inventory, 500, 200);
+    } else if (key_code === "KeyG" || key_code === "Comma") {
+      this.game.execute_get_first_item();
+    }
+  }
+
+  close_inventory_menu() {
+    this.inventory_menu.destroy();
+    this.inventory_menu = null;
+  }
+
+  handle_key_inventory(key_code) {
+    if (key_code === "KeyJ" || key_code === "ArrowDown") {
+      this.inventory_menu.move_cursor(1);
+    } else if (key_code === "KeyK" || key_code === "ArrowUp") {
+      this.inventory_menu.move_cursor(-1);
+    } else if (key_code === "KeyI") {
+      this.close_inventory_menu();
+    } else if (key_code === "KeyD") {
+      if (!this.inventory_menu.is_empty) {
         this.game.execute_command(Model.Command.DROP_ITEM, this.inventory_menu.get_selected_item());
-        this.inventory_menu.destroy();
-        this.inventory_menu = null;
+        this.close_inventory_menu();
       }
-    } else if (event.code === "KeyW") {
-      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+    } else if (key_code === "KeyW") {
+      if (!this.inventory_menu.is_empty) {
         const item = this.inventory_menu.get_selected_item();
         if (item.template.equipment_slot) {
           this.game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item);
-          this.inventory_menu.destroy();
-          this.inventory_menu = null;
+          this.close_inventory_menu();
         }
       }
-    } else if (event.code === "KeyE") {
-      if (this.inventory_menu && !this.inventory_menu.is_empty) {
+    } else if (key_code === "KeyE") {
+      if (!this.inventory_menu.is_empty) {
         const item = this.inventory_menu.get_selected_item();
         if (item.template.consume_effect) {
           this.game.execute_command(Model.Command.CONSUME_ITEM, item);
-          this.inventory_menu.destroy();
-          this.inventory_menu = null;
+          this.close_inventory_menu();
         }
       }
-    } else if (event.code === "Escape") {
-      if (this.inventory_menu) {
-        this.inventory_menu.destroy();
-        this.inventory_menu = null;
-      }
+    } else if (key_code === "Escape") {
+      this.close_inventory_menu();
+    }
+  }
+
+  on_key_down(event) {
+    if (this.inventory_menu) {
+      this.handle_key_inventory(event.code);
+    } else {
+      this.handle_key_normal(event.code);
     }
 
     if (this.sprites_latest_turn < this.game.turn) {
