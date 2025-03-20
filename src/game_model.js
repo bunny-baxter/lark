@@ -280,6 +280,7 @@ export class Floor {
     if (item_ref.template.consume_effect === ConsumeItemEffect.HEAL) {
       if (item_ref.beatitude === Beatitude.CURSED) {
         message += ` ${Messages.effect_cursed_herb(this.player_ref.template.display_name)}`;
+        // TODO: This puts the "player dies" message before the effect message.
         this._change_actor_hp(this.player_ref, -1 * HEALING_HERB_CURSED_DAMAGE_AMOUNT);
       } else {
         if (item_ref.beatitude === Beatitude.BLESSED) {
@@ -480,6 +481,14 @@ export class Game {
       } else if (delta_x === 0 && delta_y === -1) {
         this.execute_command(Command.WALK_UP);
       }
+    }
+  }
+
+  execute_get_first_item() {
+    const player_ref = this.current_floor.player_ref;
+    const items = this.current_floor.find_loose_items_at(player_ref.tile_x, player_ref.tile_y);
+    if (items.length > 0) {
+      this.execute_command(Command.GET_ITEM, items[0]);
     }
   }
 

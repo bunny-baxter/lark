@@ -54,9 +54,17 @@ export function get_visual_for_cell_type(cell_type) {
 
 
 export function format_messages(game) {
-  let messages_text = "";
+  const messages = [];
   for (const message of game.get_messages()) {
-    messages_text += ` - ${message}\n`;
+    messages.push(` - ${message}`);
   }
-  return messages_text;
+  return messages.join("\n");
+}
+
+export function get_item_description(item) {
+  let description = item.get_name();
+  if (item.equipped) {
+    description += " (equipped)";
+  }
+  return description;
 }

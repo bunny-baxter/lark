@@ -71,14 +71,6 @@ class UiSprites {
   }
 }
 
-function get_item_description(item) {
-  let description = item.get_name();
-  if (item.equipped) {
-    description += " (equipped)";
-  }
-  return description;
-}
-
 class InventoryMenu {
   is_empty;
   cursor_index = 0;
@@ -96,7 +88,7 @@ class InventoryMenu {
       this.item_list = item_list;
       for (let i = 0; i < this.item_list.length; i++) {
         const item = this.item_list[i];
-        const description = `${i + 1}. ${get_item_description(item)}`;
+        const description = `${i + 1}. ${UiShared.get_item_description(item)}`;
         const sprite = phaser_scene.add.text(x, y + i * 24, description, UI_FONT_STYLE);
         sprite.setScrollFactor(0);
         sprite.setDepth(UI_DEPTH);
@@ -262,11 +254,7 @@ class GameplayScene extends Phaser.Scene {
       }
     } else if (event.code === "KeyG" || event.code === "Comma") {
       if (!this.inventory_menu) {
-        const player_ref = this.game.current_floor.player_ref;
-        const items = this.game.current_floor.find_loose_items_at(player_ref.tile_x, player_ref.tile_y);
-        if (items.length > 0) {
-          this.game.execute_command(Model.Command.GET_ITEM, items[0]);
-        }
+        game.execute_get_first_item();
       }
     } else if (event.code === "KeyD") {
       if (this.inventory_menu && !this.inventory_menu.is_empty) {
