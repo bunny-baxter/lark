@@ -51,8 +51,10 @@ function get_visual_for_cell(x, y) {
 const ColorChars = Object.freeze({
   [UiShared.BasicColor.WHITE]: "W",
   [UiShared.BasicColor.YELLOW]: "Y",
-  [UiShared.BasicColor.GRAY]: "c",
+  [UiShared.BasicColor.GRAY]: "K",
   [UiShared.BasicColor.MAGENTA]: "M",
+  [UiShared.BasicColor.CYAN]: "C",
+  [UiShared.BasicColor.BLUE]: "b",
 });
 
 

@@ -63,3 +63,7 @@ export function dazzle_miss(actor_name, target_name) {
 export function dazzle_fades(actor_name) {
   return `The fairy lights fade away from ${actor_name}.`;
 }
+
+export function water_slow(actor_name) {
+  return `The water slows ${actor_name}.`;
+}

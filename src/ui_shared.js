@@ -7,10 +7,13 @@ export const BasicColor = Object.freeze({
   YELLOW: Symbol("YELLOW"),
   GRAY: Symbol("GRAY"),
   MAGENTA: Symbol("MAGENTA"),
+  CYAN: Symbol("CYAN"),
+  BLUE: Symbol("BLUE"),
 });
 
 const ConditionLabels = Object.freeze({
   [Model.Condition.DAZZLE]: "dazzled",
+  [Model.Condition.SLOW]: "slow",
 });
 
 export class CellVisual {
@@ -51,11 +54,19 @@ export function get_char_for_cell_type(cell_type) {
   if (cell_type === Model.CellType.FLOOR) return ".";
   if (cell_type === Model.CellType.DEFAULT_WALL) return "#";
   if (cell_type === Model.CellType.FLOWER_HAZARD) return "f";
+  if (cell_type === Model.CellType.SHALLOW_WATER) return "~";
+  if (cell_type === Model.CellType.DEEP_WATER) return "~";
   return null;
 }
 
 export function get_visual_for_cell_type(cell_type) {
-  return new CellVisual(get_char_for_cell_type(cell_type), BasicColor.WHITE);
+  let color = BasicColor.WHITE;
+  if (cell_type === Model.CellType.SHALLOW_WATER) {
+    color = BasicColor.CYAN;
+  } else if (cell_type === Model.CellType.DEEP_WATER) {
+    color = BasicColor.BLUE;
+  }
+  return new CellVisual(get_char_for_cell_type(cell_type), color);
 }
 
 

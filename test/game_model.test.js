@@ -40,6 +40,23 @@ test("flower hazard does damage on cycle", () => {
   expect(game.get_messages().length).toBe(0);
 });
 
+test("player can walk into shallow but not deep water", () => {
+  floor.set_cell(2, 1, Model.CellType.SHALLOW_WATER);
+  floor.set_cell(3, 1, Model.CellType.DEEP_WATER);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  expect([floor.player_ref.tile_x, floor.player_ref.tile_y]).toEqual([2, 1]);
+});
+
+test("player slowed by shallow water", () => {
+  floor.set_cell(2, 1, Model.CellType.SHALLOW_WATER);
+  expect(game.turn).toBe(0);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  expect(game.turn).toBe(2);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  expect(game.turn).toBe(3);
+});
+
 test("heron enemy moves vertically", () => {
   floor.set_cell(3, 4, Model.CellType.DEFAULT_WALL);
   const heron_ref = floor.create_actor(ActorTemplate.HERON, 3, 1);
@@ -68,6 +85,20 @@ test("starlight fairy dazzles player at range", () => {
   game.execute_command(Model.Command.PASS);
   // Condition wears off.
   expect(floor.player_ref.has_condition(Model.Condition.DAZZLE)).toBe(false);
+});
+
+test("slow player skips turns", () => {
+  floor.player_ref.add_condition(Model.Condition.SLOW, 4);
+  expect(game.turn).toBe(0);
+  expect(floor.player_ref.has_condition(Model.Condition.SLOW)).toBe(true);
+  game.execute_command(Model.Command.PASS);
+  expect(game.turn).toBe(2);
+  expect(floor.player_ref.has_condition(Model.Condition.SLOW)).toBe(true);
+  game.execute_command(Model.Command.PASS);
+  expect(game.turn).toBe(4);
+  expect(floor.player_ref.has_condition(Model.Condition.SLOW)).toBe(false);
+  game.execute_command(Model.Command.PASS);
+  expect(game.turn).toBe(5);
 });
 
 test("adjacent enemy attacks player", () => {

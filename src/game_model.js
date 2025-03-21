@@ -8,6 +8,8 @@ export const CellType = Object.freeze({
   FLOOR: Symbol("FLOOR"),
   DEFAULT_WALL: Symbol("DEFAULT_WALL"),
   FLOWER_HAZARD: Symbol("FLOWER_HAZARD"),
+  SHALLOW_WATER: Symbol("SHALLOW_WATER"),
+  DEEP_WATER: Symbol("DEEP_WATER"),
 });
 
 export const Phase = Object.freeze({
@@ -18,6 +20,7 @@ export const Phase = Object.freeze({
 
 export const Condition = Object.freeze({
   DAZZLE: Symbol("DAZZLE"),
+  SLOW: Symbol("SLOW"),
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
@@ -42,6 +45,7 @@ export class Actor {
   current_hp;
   attack_power;
   conditions = new Map();
+  skip_next_turn = false;
   inventory = null;
   is_dead = false;
 
@@ -153,13 +157,19 @@ export class Floor {
         item_ref.tile_y = to_y;
       }
     }
+    if (this.get_cell_type(to_x, to_y) === CellType.SHALLOW_WATER) {
+      actor_ref.skip_next_turn = true;
+      if (actor_ref === this.player_ref) {
+        this.parent_game.add_message(Messages.water_slow(actor_ref.template.display_name));
+      }
+    }
   }
 
   actor_walk(actor_ref, delta_x, delta_y) {
     const next_x = actor_ref.tile_x + delta_x;
     const next_y = actor_ref.tile_y + delta_y;
     const next_cell_type = this.get_cell_type(next_x, next_y);
-    if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.OUT_OF_BOUNDS) {
+    if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.DEEP_WATER || next_cell_type === CellType.OUT_OF_BOUNDS) {
       return false;
     }
     if (this.find_actors_at(next_x, next_y).length > 0) {
@@ -382,7 +392,11 @@ export class Floor {
   }
 
   do_end_of_turn() {
+    // TODO: Conditions should be generic to all actors.
     for (const condition of this.player_ref.conditions.keys()) {
+      if (condition === Condition.SLOW) {
+        this.player_ref.skip_next_turn = true;
+      }
       const next_turns = this.player_ref.conditions.get(condition) - 1;
       if (next_turns === 0) {
         this.player_ref.conditions.delete(condition);
@@ -450,11 +464,23 @@ export class Game {
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.BLESSED, 1, 4);
     this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.BLESSED, 2, 4);
+
+    this.current_floor.set_cell(1, 6, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(2, 6, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(1, 7, CellType.DEEP_WATER);
+    this.current_floor.set_cell(2, 7, CellType.DEEP_WATER);
   }
 
-  _end_player_turn() {
+  _end_player_turn(allow_skip_turn) {
     this.turn += 1;
     this.current_floor.do_end_of_turn();
+    if (this.current_floor.player_ref.skip_next_turn) {
+      this.current_floor.player_ref.skip_next_turn = false;
+      if (allow_skip_turn) {
+        // Should only skip 1 turn and then allow another.
+        this._end_player_turn(false);
+      }
+    }
   }
 
   execute_walk_or_fight(delta_x, delta_y) {
@@ -528,7 +554,7 @@ export class Game {
       this.current_floor.player_consume_item(opt_param);
     }
 
-    this._end_player_turn();
+    this._end_player_turn(true);
   }
 
   add_message(message) {
