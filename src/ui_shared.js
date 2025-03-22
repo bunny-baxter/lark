@@ -28,6 +28,7 @@ function get_char_for_actor(template) {
   if (template === Content.ActorTemplate.PLAYER) return "@";
   if (template === Content.ActorTemplate.HERON) return "h";
   if (template === Content.ActorTemplate.STARLIGHT_FAIRY) return "y";
+  if (template === Content.ActorTemplate.MERMAID) return "m";
   return "X";
 }
 
@@ -40,6 +41,7 @@ function get_char_for_item(template) {
   if (template === Content.ItemTemplate.ORDINARY_STONE) return "*";
   if (template === Content.ItemTemplate.ORDINARY_SWORD) return "/";
   if (template === Content.ItemTemplate.HEALING_HERB) return "%";
+  if (template === Content.ItemTemplate.SWIMMING_RING) return "o";
   return "X";
 }
 

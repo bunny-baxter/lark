@@ -57,6 +57,22 @@ test("player slowed by shallow water", () => {
   expect(game.turn).toBe(3);
 });
 
+test("player with swimming ring moves through water", () => {
+  const item_ref = floor.create_item(ItemTemplate.SWIMMING_RING, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref);
+
+  floor.set_cell(2, 1, Model.CellType.SHALLOW_WATER);
+  floor.set_cell(3, 1, Model.CellType.DEEP_WATER);
+
+  expect(game.turn).toBe(2);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  game.execute_command(Model.Command.WALK_RIGHT);
+  expect([floor.player_ref.tile_x, floor.player_ref.tile_y]).toEqual([4, 1]);
+  expect(game.turn).toBe(5);
+});
+
 test("heron enemy moves vertically", () => {
   floor.set_cell(3, 4, Model.CellType.DEFAULT_WALL);
   const heron_ref = floor.create_actor(ActorTemplate.HERON, 3, 1);

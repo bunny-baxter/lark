@@ -1,4 +1,4 @@
-import {ActorBehavior, ActorTemplate, ConsumeItemEffect, ItemTemplate} from './content.js';
+import {ActorBehavior, ActorTemplate, ConsumeItemEffect, EquippedSpecialEffect, ItemTemplate} from './content.js';
 import * as Messages from './messages.js';
 import * as Util from './util.js';
 
@@ -70,6 +70,22 @@ export class Actor {
     if (!this.conditions.has(condition) || this.conditions.get(condition) < turns) {
       this.conditions.set(condition, turns);
     }
+  }
+
+  find_equipped_item(predicate) {
+    if (!this.inventory) {
+      return false;
+    }
+    for (const item_ref of this.inventory) {
+      if (item_ref.equipped && predicate(item_ref)) {
+        return item_ref;
+      }
+    }
+    return false;
+  }
+
+  is_swimming() {
+    return this.template.swims || this.find_equipped_item((item_ref) => item_ref.template.equipped_special_effect === EquippedSpecialEffect.SWIMMING);
   }
 }
 
@@ -158,8 +174,8 @@ export class Floor {
       }
     }
     if (this.get_cell_type(to_x, to_y) === CellType.SHALLOW_WATER) {
-      actor_ref.skip_next_turn = true;
-      if (actor_ref === this.player_ref) {
+      if (!actor_ref.is_swimming()) {
+        actor_ref.skip_next_turn = true;
         this.parent_game.add_message(Messages.water_slow(actor_ref.template.display_name));
       }
     }
@@ -169,7 +185,10 @@ export class Floor {
     const next_x = actor_ref.tile_x + delta_x;
     const next_y = actor_ref.tile_y + delta_y;
     const next_cell_type = this.get_cell_type(next_x, next_y);
-    if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.DEEP_WATER || next_cell_type === CellType.OUT_OF_BOUNDS) {
+    if (next_cell_type === CellType.DEFAULT_WALL || next_cell_type === CellType.OUT_OF_BOUNDS) {
+      return false;
+    }
+    if (next_cell_type === CellType.DEEP_WATER && !actor_ref.is_swimming()) {
       return false;
     }
     if (this.find_actors_at(next_x, next_y).length > 0) {
@@ -353,8 +372,20 @@ export class Floor {
     }
   }
 
+  _actor_walk_randomly_with_probability(actor, p) {
+    if (Math.random() < p) {
+      const [delta_x, delta_y] = Util.choose_rand([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+      this.actor_walk(actor, delta_x, delta_y);
+    }
+  }
+
   _do_actors_turn(actor) {
     console.assert(actor.template.behavior !== ActorBehavior.PLAYER_INPUT);
+
+    if (actor.skip_next_turn) {
+      actor.skip_next_turn = false;
+      return;
+    }
 
     const distance_to_player = Util.taxicab_distance(actor.tile_x, actor.tile_y, this.player_ref.tile_x, this.player_ref.tile_y);
     const orthogonal_to_player = actor.tile_x === this.player_ref.tile_x || actor.tile_y === this.player_ref.tile_y;
@@ -382,11 +413,19 @@ export class Floor {
         this.player_ref.add_condition(Condition.DAZZLE, 4);
         actor.behavior_state = 3;
       } else {
-        // Walk randomly.
-        if (Util.rand_int(3) < 2) {
-          const [delta_x, delta_y] = Util.choose_rand([[-1, 0], [1, 0], [0, -1], [0, 1]]);
-          this.actor_walk(actor, delta_x, delta_y);
+        this._actor_walk_randomly_with_probability(actor, 0.667);
+      }
+    } else if (actor.template.behavior === ActorBehavior.APPROACH_WHEN_NEAR) {
+      if (distance_to_player <= 4) {
+        const dx = this.player_ref.tile_x - actor.tile_x;
+        const dy = this.player_ref.tile_y - actor.tile_y;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          this.actor_walk(actor, Util.sign(dx), 0);
+        } else {
+          this.actor_walk(actor, 0, Util.sign(dy));
         }
+      } else {
+        this._actor_walk_randomly_with_probability(actor, 0.25);
       }
     }
   }
@@ -447,7 +486,7 @@ export class Game {
     this.current_floor.create_player(1, 1);
   }
 
-  populate_test_level() {
+  populate_test_level_1() {
     this.current_floor.set_cell(3, 4, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(3, 5, CellType.DEFAULT_WALL);
     this.current_floor.set_cell(5, 5, CellType.DEFAULT_WALL);
@@ -464,11 +503,23 @@ export class Game {
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.BLESSED, 1, 4);
     this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.BLESSED, 2, 4);
+  }
 
-    this.current_floor.set_cell(1, 6, CellType.SHALLOW_WATER);
-    this.current_floor.set_cell(2, 6, CellType.SHALLOW_WATER);
-    this.current_floor.set_cell(1, 7, CellType.DEEP_WATER);
-    this.current_floor.set_cell(2, 7, CellType.DEEP_WATER);
+  populate_test_level_2() {
+    this.current_floor.create_actor(ActorTemplate.MERMAID, 5, 5);
+    this.current_floor.create_item(ItemTemplate.SWIMMING_RING, Beatitude.NEUTRAL, 2, 1);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 4, 2);
+
+    this.current_floor.set_cell(1, 3, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(2, 3, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(1, 4, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(2, 4, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(3, 4, CellType.SHALLOW_WATER);
+    this.current_floor.set_cell(4, 4, CellType.SHALLOW_WATER);
+
+    this.current_floor.set_cell(1, 5, CellType.DEEP_WATER);
+    this.current_floor.set_cell(2, 5, CellType.DEEP_WATER);
+    this.current_floor.set_cell(3, 5, CellType.DEEP_WATER);
   }
 
   _end_player_turn(allow_skip_turn) {

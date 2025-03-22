@@ -154,7 +154,7 @@ class GameplayScene extends Phaser.Scene {
   _init_game() {
     this.game = new Model.Game();
     this.game.enter_new_floor();
-    this.game.populate_test_level();
+    this.game.populate_test_level_1();
 
     this.cell_sprites = [];
     for (let x = 0; x < this.game.current_floor.size_tiles.w; x++) {

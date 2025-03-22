@@ -7,7 +7,7 @@ import * as UiShared from './ui_shared.js';
 
 const game = new Model.Game();
 game.enter_new_floor();
-game.populate_test_level();
+game.populate_test_level_2();
 
 let inventory_menu = null;
 

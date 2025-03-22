@@ -2,6 +2,7 @@ export const ActorBehavior = Object.freeze({
   PLAYER_INPUT: Symbol("PLAYER_INPUT"),
   PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
   INFLICT_DAZZLE: Symbol("INFLICT_DAZZLE"),
+  APPROACH_WHEN_NEAR: Symbol("APPROACH_WHEN_NEAR"),
 });
 
 class ActorTemplateEntry {
@@ -10,6 +11,7 @@ class ActorTemplateEntry {
   behavior;
   max_hp;
   starting_attack_power;
+  swims;
 
   constructor(config) {
     this.display_name = config.display_name;
@@ -17,6 +19,7 @@ class ActorTemplateEntry {
     this.behavior = config.behavior;
     this.max_hp = config.max_hp;
     this.starting_attack_power = config.starting_attack_power
+    this.swims = !!config.swims;
   }
 }
 
@@ -46,22 +49,37 @@ export const ActorTemplate = Object.freeze({
     starting_attack_power: 1,
   }),
 
+  MERMAID: new ActorTemplateEntry({
+    display_name: "mermaid",
+    attack_verb: "slaps",
+    behavior: ActorBehavior.APPROACH_WHEN_NEAR,
+    max_hp: 6,
+    starting_attack_power: 2,
+    swims: true,
+  }),
+
 });
 
 export const ConsumeItemEffect = Object.freeze({
   HEAL: Symbol("HEAL"),
 });
 
+export const EquippedSpecialEffect = Object.freeze({
+  SWIMMING: Symbol("SWIMMING"),
+});
+
 class ItemTemplateEntry {
   display_name;
   equipment_slot;
   equipped_attack_power;
+  equipped_special_effect;
   consume_effect;
 
   constructor(config) {
     this.display_name = config.display_name;
     this.equipment_slot = config.equipment_slot || null;
     this.equipped_attack_power = config.equipped_attack_power || 0;
+    this.equipped_special_effect = config.equipped_special_effect || null;
     this.consume_effect = config.consume_effect;
   }
 }
@@ -81,6 +99,12 @@ export const ItemTemplate = Object.freeze({
   HEALING_HERB: new ItemTemplateEntry({
     display_name: "healing herb",
     consume_effect: ConsumeItemEffect.HEAL,
+  }),
+
+  SWIMMING_RING: new ItemTemplateEntry({
+    display_name: "ring of swimming",
+    equipment_slot: "ring",
+    equipped_special_effect: EquippedSpecialEffect.SWIMMING,
   }),
 
 });

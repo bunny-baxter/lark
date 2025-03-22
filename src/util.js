@@ -19,6 +19,11 @@ export function taxicab_distance(x1, y1, x2, y2) {
   return Math.abs(x1 - x2) + Math.abs(y1 - y2);
 }
 
+export function sign(n) {
+  if (n === 0) return 0;
+  return n > 0 ? 1 : -1;
+}
+
 export function capitalize(str) {
   if (!str) {
     return str;
