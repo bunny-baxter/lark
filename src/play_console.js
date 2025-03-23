@@ -1,3 +1,4 @@
+import arg from 'arg';
 import pkg from 'terminal-kit';
 const { terminal } = pkg;
 
@@ -5,9 +6,22 @@ import * as Model from './game_model.js';
 import * as UiShared from './ui_shared.js';
 
 
+const args = arg({
+  "--level": Number,
+});
+const test_level_index = args["--level"];
+
+
 const game = new Model.Game();
 game.enter_new_floor();
-game.populate_test_level_2();
+if (test_level_index == null || test_level_index === 1) {
+  game.populate_test_level_1();
+} else if (test_level_index === 2) {
+  game.populate_test_level_2();
+} else {
+  console.error(`No test level with index ${test_level_index}`);
+  process.exit(1);
+}
 
 let inventory_menu = null;
 
