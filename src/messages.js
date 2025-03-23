@@ -21,7 +21,7 @@ export function drop_item(actor_name, item_name) {
 }
 
 export function equip_item(actor_name, item_name, equipment_slot) {
-  let verb = "equips";
+  let verb = "puts on";
   if (equipment_slot === "weapon") {
     verb = "wields";
   }
@@ -29,9 +29,9 @@ export function equip_item(actor_name, item_name, equipment_slot) {
 }
 
 export function unequip_item(actor_name, item_name, equipment_slot) {
-  let verb = "removes";
+  let verb = "takes off";
   if (equipment_slot === "weapon") {
-    verb = "puts away";
+    verb = "sheathes";
   }
   return `${Util.capitalize(actor_name)} ${verb} the ${item_name}.`;
 }

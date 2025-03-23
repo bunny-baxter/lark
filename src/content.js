@@ -71,6 +71,7 @@ export const EquippedSpecialEffect = Object.freeze({
 class ItemTemplateEntry {
   display_name;
   equipment_slot;
+  weapon_attack_verb;
   equipped_attack_power;
   equipped_special_effect;
   consume_effect;
@@ -78,6 +79,7 @@ class ItemTemplateEntry {
   constructor(config) {
     this.display_name = config.display_name;
     this.equipment_slot = config.equipment_slot || null;
+    this.weapon_attack_verb = config.weapon_attack_verb || null;
     this.equipped_attack_power = config.equipped_attack_power || 0;
     this.equipped_special_effect = config.equipped_special_effect || null;
     this.consume_effect = config.consume_effect;
@@ -93,7 +95,15 @@ export const ItemTemplate = Object.freeze({
   ORDINARY_SWORD: new ItemTemplateEntry({
     display_name: "steel sword",
     equipment_slot: "weapon",
+    weapon_attack_verb: "slashes",
     equipped_attack_power: 2,
+  }),
+
+  POWERFUL_SWORD: new ItemTemplateEntry({
+    display_name: "starmetal sword",
+    equipment_slot: "weapon",
+    weapon_attack_verb: "slashes",
+    equipped_attack_power: 4,
   }),
 
   HEALING_HERB: new ItemTemplateEntry({
@@ -105,6 +115,12 @@ export const ItemTemplate = Object.freeze({
     display_name: "ring of swimming",
     equipment_slot: "ring",
     equipped_special_effect: EquippedSpecialEffect.SWIMMING,
+  }),
+
+  FENCING_RING: new ItemTemplateEntry({
+    display_name: "ring of fencing",
+    equipment_slot: "ring",
+    equipped_attack_power: 1,
   }),
 
 });

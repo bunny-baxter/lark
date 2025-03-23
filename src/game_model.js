@@ -84,6 +84,14 @@ export class Actor {
     return false;
   }
 
+  get_attack_verb() {
+    const weapon = this.find_equipped_item((item_ref) => item_ref.template.equipment_slot === "weapon");
+    if (weapon) {
+      return weapon.template.weapon_attack_verb;
+    }
+    return this.template.attack_verb;
+  }
+
   is_swimming() {
     return this.template.swims || this.find_equipped_item((item_ref) => item_ref.template.equipped_special_effect === EquippedSpecialEffect.SWIMMING);
   }
@@ -215,9 +223,8 @@ export class Floor {
       this.parent_game.add_message(Messages.dazzle_miss(attacker_ref.template.display_name, defender_ref.template.display_name));
       return;
     }
-    // TODO: Change message based on wielded weapon.
     this.parent_game.add_message(Messages.fight(
-      attacker_ref.template.display_name, attacker_ref.template.attack_verb, defender_ref.template.display_name));
+      attacker_ref.template.display_name, attacker_ref.get_attack_verb(), defender_ref.template.display_name));
     this._change_actor_hp(defender_ref, -1 * attacker_ref.attack_power);
   }
 
@@ -271,7 +278,9 @@ export class Floor {
   player_drop_item(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
 
-    // TODO: Unequip item before dropping.
+    if (item_ref.equipped) {
+      this.player_toggle_equipment(item_ref);
+    }
     this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = null;
     Util.remove_first(this.player_ref.inventory, item_ref);
@@ -496,6 +505,7 @@ export class Game {
     this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 4, 5);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 1, 2);
+    this.current_floor.create_item(ItemTemplate.POWERFUL_SWORD, Beatitude.NEUTRAL, 2, 2);
     this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.NEUTRAL, 2, 2);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.CURSED, 1, 3);
@@ -508,6 +518,7 @@ export class Game {
   populate_test_level_2() {
     this.current_floor.create_actor(ActorTemplate.MERMAID, 5, 5);
     this.current_floor.create_item(ItemTemplate.SWIMMING_RING, Beatitude.NEUTRAL, 2, 1);
+    this.current_floor.create_item(ItemTemplate.FENCING_RING, Beatitude.NEUTRAL, 3, 1);
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 4, 2);
 
     this.current_floor.set_cell(1, 3, CellType.SHALLOW_WATER);

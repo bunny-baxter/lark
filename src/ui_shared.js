@@ -40,8 +40,9 @@ export function get_visual_for_actor(template) {
 function get_char_for_item(template) {
   if (template === Content.ItemTemplate.ORDINARY_STONE) return "*";
   if (template === Content.ItemTemplate.ORDINARY_SWORD) return "/";
+  if (template === Content.ItemTemplate.POWERFUL_SWORD) return "|";
   if (template === Content.ItemTemplate.HEALING_HERB) return "%";
-  if (template === Content.ItemTemplate.SWIMMING_RING) return "o";
+  if (template === Content.ItemTemplate.SWIMMING_RING || template === Content.ItemTemplate.FENCING_RING) return "o";
   return "X";
 }
 
