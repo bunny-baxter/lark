@@ -40,6 +40,10 @@ export function consume_item_prefix(actor_name, item_name) {
   return `${Util.capitalize(actor_name)} eats the ${item_name}.`;
 }
 
+export function activate_wand(actor_name, item_name) {
+  return `${Util.capitalize(actor_name)} waves the ${item_name}.`;
+}
+
 export function effect_heals(actor_name) {
   return `${Util.capitalize(actor_name)}'s hp is restored.`;
 }
@@ -48,8 +52,16 @@ export function effect_cursed_herb(actor_name) {
   return `The curse drains ${actor_name}'s hp.`;
 }
 
+export function effect_ice_damage(actor_name) {
+  return `${Util.capitalize(actor_name)} is hurt by magical cold.`;
+}
+
 export function effect_gain_max_hp(actor_name) {
   return `${Util.capitalize(actor_name)} feels hearty.`;
+}
+
+export function effect_nothing_happens() {
+  return "But nothing happens.";
 }
 
 export function fairy_inflict_dazzle(actor_name, target_name) {

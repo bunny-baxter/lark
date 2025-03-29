@@ -60,8 +60,13 @@ export const ActorTemplate = Object.freeze({
 
 });
 
-export const ConsumeItemEffect = Object.freeze({
+export const ItemEffect = Object.freeze({
   HEAL: Symbol("HEAL"),
+  ICE_DAMAGE: Symbol("ICE_DAMAGE"),
+});
+
+export const ItemActivateTargeting = Object.freeze({
+  DIRECTION: Symbol("DIRECTION"),
 });
 
 export const EquippedSpecialEffect = Object.freeze({
@@ -82,7 +87,10 @@ class ItemTemplateEntry {
     this.weapon_attack_verb = config.weapon_attack_verb || null;
     this.equipped_attack_power = config.equipped_attack_power || 0;
     this.equipped_special_effect = config.equipped_special_effect || null;
-    this.consume_effect = config.consume_effect;
+    this.consume_effect = config.consume_effect || null;
+    this.activate_effect = config.activate_effect || null;
+    this.activate_targeting = config.activate_targeting || null;
+    this.activate_charges = config.activate_charges || -1;
   }
 }
 
@@ -108,7 +116,7 @@ export const ItemTemplate = Object.freeze({
 
   HEALING_HERB: new ItemTemplateEntry({
     display_name: "healing herb",
-    consume_effect: ConsumeItemEffect.HEAL,
+    consume_effect: ItemEffect.HEAL,
   }),
 
   SWIMMING_RING: new ItemTemplateEntry({
@@ -121,6 +129,13 @@ export const ItemTemplate = Object.freeze({
     display_name: "ring of fencing",
     equipment_slot: "ring",
     equipped_attack_power: 1,
+  }),
+
+  ICE_WAND: new ItemTemplateEntry({
+    display_name: "wand of freezing",
+    activate_effect: ItemEffect.ICE_DAMAGE,
+    activate_targeting: ItemActivateTargeting.DIRECTION,
+    activate_charges: 5,
   }),
 
 });

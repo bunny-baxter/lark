@@ -24,6 +24,7 @@ if (test_level_index == null || test_level_index === 1) {
 }
 
 let inventory_menu = null;
+let activating_item = null;
 
 terminal.fullscreen();
 terminal.grabInput();
@@ -147,7 +148,9 @@ function update_terminal() {
     terminal.moveTo(1, 13, conditions_text);
   }
 
-  if (inventory_menu) {
+  if (activating_item) {
+    terminal.moveTo(21, 12, `Which direction do you wave the ${activating_item.get_name()}?`);
+  } else if (inventory_menu) {
     inventory_menu.update_terminal();
   }
 
@@ -202,6 +205,30 @@ function handle_key_inventory(name) {
         inventory_menu = null;
       }
     }
+  } else if (name === "a") {
+    if (!inventory_menu.is_empty) {
+      const item = inventory_menu.get_selected_item();
+      if (item.template.activate_effect) {
+        activating_item = item;
+        inventory_menu = null;
+      }
+    }
+  }
+}
+
+function handle_key_targeting(name) {
+  if (name === "h" || name === "LEFT") {
+    game.execute_command(Model.Command.ACTIVATE_ITEM_LEFT, activating_item);
+    activating_item = null;
+  } else if (name === "j" || name === "DOWN") {
+    game.execute_command(Model.Command.ACTIVATE_ITEM_DOWN, activating_item);
+    activating_item = null;
+  } else if (name === "k" || name === "UP") {
+    game.execute_command(Model.Command.ACTIVATE_ITEM_UP, activating_item);
+    activating_item = null;
+  } else if (name === "l" || name === "RIGHT") {
+    game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, activating_item);
+    activating_item = null;
   }
 }
 
@@ -210,7 +237,9 @@ terminal.on("key", (name, matches, data) => {
     do_exit();
     return;
   }
-  if (inventory_menu) {
+  if (activating_item) {
+    handle_key_targeting(name);
+  } else if (inventory_menu) {
     handle_key_inventory(name);
   } else {
     handle_key_normal(name);

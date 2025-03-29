@@ -1,4 +1,4 @@
-import {ActorBehavior, ActorTemplate, ConsumeItemEffect, EquippedSpecialEffect, ItemTemplate} from './content.js';
+import {ActorBehavior, ActorTemplate, EquippedSpecialEffect, ItemEffect, ItemTemplate} from './content.js';
 import * as Messages from './messages.js';
 import * as Util from './util.js';
 
@@ -27,6 +27,7 @@ export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
 const HEALING_HERB_NEUTRAL_HEALING_AMOUNT = 20;
 export const HEALING_HERB_BLESSED_MAX_HP_BONUS = 2;
 export const HEALING_HERB_CURSED_DAMAGE_AMOUNT = 10;
+const ICE_WAND_DAMAGE_AMOUNT = 5;
 
 export class CellData {
   type = CellType.EMPTY;
@@ -113,21 +114,36 @@ export class Item {
   is_destroyed = false;
   held_actor = null;
   equipped = false;
+  remaining_charges = 0;
 
   constructor(id, template, beatitude) {
     this.id = id;
     this.template = template;
     this.beatitude = beatitude;
+
+    if (this.template.activate_effect) {
+      this.remaining_charges = this.template.activate_charges;
+    }
   }
 
   get_name() {
+    const parts = []
+
     let beatitude_prefix = "neutral";
     if (this.beatitude === Beatitude.CURSED) {
       beatitude_prefix = "cursed";
     } else if (this.beatitude === Beatitude.BLESSED) {
       beatitude_prefix = "blessed";
     }
-    return `${beatitude_prefix} ${this.template.display_name}`
+    parts.push(beatitude_prefix);
+
+    parts.push(this.template.display_name)
+
+    if (this.template.activate_effect && this.remaining_charges >= 0) {
+      parts.push(`(${this.remaining_charges} charges)`);
+    }
+
+    return parts.join(" ");
   }
 }
 
@@ -310,33 +326,74 @@ export class Floor {
     }
   }
 
+  _run_item_effect(source_item, effect, target_actor) {
+    if (effect === ItemEffect.HEAL) {
+      if (source_item.beatitude === Beatitude.CURSED) {
+        this.parent_game.add_message(Messages.effect_cursed_herb(target_actor.template.display_name));
+        this._change_actor_hp(target_actor, -1 * HEALING_HERB_CURSED_DAMAGE_AMOUNT);
+      } else {
+        if (source_item.beatitude === Beatitude.BLESSED) {
+          target_actor.max_hp += HEALING_HERB_BLESSED_MAX_HP_BONUS;
+        }
+        this.parent_game.add_message(Messages.effect_heals(target_actor.template.display_name));
+        this._change_actor_hp(target_actor, HEALING_HERB_NEUTRAL_HEALING_AMOUNT);
+        if (source_item.beatitude === Beatitude.BLESSED) {
+          this.parent_game.add_message(Messages.effect_gain_max_hp(target_actor.template.display_name));
+        }
+      }
+    } else if (effect === ItemEffect.ICE_DAMAGE) {
+      this.parent_game.add_message(Messages.effect_ice_damage(target_actor.template.display_name));
+      this._change_actor_hp(target_actor, -1 * ICE_WAND_DAMAGE_AMOUNT);
+    }
+  }
+
   player_consume_item(item_ref) {
     console.assert(item_ref.held_actor === this.player_ref);
     console.assert(item_ref.template.consume_effect !== undefined);
 
-    let message = Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name());
+    this.parent_game.add_message(Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name()));
+    this._run_item_effect(item_ref, item_ref.template.consume_effect, this.player_ref);
 
-    if (item_ref.template.consume_effect === ConsumeItemEffect.HEAL) {
-      if (item_ref.beatitude === Beatitude.CURSED) {
-        message += ` ${Messages.effect_cursed_herb(this.player_ref.template.display_name)}`;
-        // TODO: This puts the "player dies" message before the effect message.
-        this._change_actor_hp(this.player_ref, -1 * HEALING_HERB_CURSED_DAMAGE_AMOUNT);
-      } else {
-        if (item_ref.beatitude === Beatitude.BLESSED) {
-          this.player_ref.max_hp += HEALING_HERB_BLESSED_MAX_HP_BONUS;
-        }
-        message += ` ${Messages.effect_heals(this.player_ref.template.display_name)}`;
-        this._change_actor_hp(this.player_ref, HEALING_HERB_NEUTRAL_HEALING_AMOUNT);
-        if (item_ref.beatitude === Beatitude.BLESSED) {
-          message += ` ${Messages.effect_gain_max_hp(this.player_ref.template.display_name)}`;
-        }
-      }
-    }
-
-    this.parent_game.add_message(message);
     item_ref.is_destroyed = true;
     Util.remove_first(this.items, item_ref);
     Util.remove_first(this.player_ref.inventory, item_ref);
+  }
+
+  player_activate_item(item_ref, delta_x, delta_y) {
+    console.assert(item_ref.held_actor === this.player_ref);
+    console.assert(item_ref.template.activate_effect !== undefined);
+    console.assert((Math.abs(delta_x) === 1 && delta_y === 0) || (delta_x === 0 && Math.abs(delta_y) === 1));
+
+    this.parent_game.add_message(Messages.activate_wand(this.player_ref.template.display_name, item_ref.get_name()));
+    if (item_ref.remaining_charges === 0) {
+      this.parent_game.add_message(Messages.effect_nothing_happens());
+      return;
+    }
+
+    let current_x = this.player_ref.tile_x;
+    let current_y = this.player_ref.tile_y;
+    let did_hit_actor = false;
+    while (true) {
+      current_x += delta_x;
+      current_y += delta_y;
+      const hit_actors = this.find_actors_at(current_x, current_y);
+      if (hit_actors.length) {
+        this._run_item_effect(item_ref, item_ref.template.activate_effect, hit_actors[0]);
+        did_hit_actor = true;
+        break;
+      }
+      const cell_type = this.get_cell_type(current_x, current_y);
+      if (cell_type === CellType.DEFAULT_WALL || cell_type === CellType.OUT_OF_BOUNDS) {
+        break;
+      }
+    }
+    if (!did_hit_actor) {
+      this.parent_game.add_message(Messages.effect_nothing_happens());
+    }
+
+    if (item_ref.remaining_charges > 0) {
+      item_ref.remaining_charges -= 1;
+    }
   }
 
   is_out_of_bounds(x, y) {
@@ -483,6 +540,10 @@ export const Command = Object.freeze({
   DROP_ITEM: Symbol("DROP_ITEM"),
   TOGGLE_EQUIPMENT: Symbol("TOGGLE_EQUIPMENT"),
   CONSUME_ITEM: Symbol("CONSUME_ITEM"),
+  ACTIVATE_ITEM_UP: Symbol("ACTIVATE_ITEM_UP"),
+  ACTIVATE_ITEM_DOWN: Symbol("ACTIVATE_ITEM_DOWN"),
+  ACTIVATE_ITEM_LEFT: Symbol("ACTIVATE_ITEM_LEFT"),
+  ACTIVATE_ITEM_RIGHT: Symbol("ACTIVATE_ITEM_RIGHT"),
 });
 
 export class Game {
@@ -520,6 +581,7 @@ export class Game {
     this.current_floor.create_item(ItemTemplate.SWIMMING_RING, Beatitude.NEUTRAL, 2, 1);
     this.current_floor.create_item(ItemTemplate.FENCING_RING, Beatitude.NEUTRAL, 3, 1);
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 4, 2);
+    this.current_floor.create_item(ItemTemplate.ICE_WAND, Beatitude.NEUTRAL, 1, 2);
 
     this.current_floor.set_cell(1, 3, CellType.SHALLOW_WATER);
     this.current_floor.set_cell(2, 3, CellType.SHALLOW_WATER);
@@ -614,6 +676,18 @@ export class Game {
     } else if (command === Command.CONSUME_ITEM) {
       console.assert(opt_param !== undefined);
       this.current_floor.player_consume_item(opt_param);
+    } else if (command === Command.ACTIVATE_ITEM_UP) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_activate_item(opt_param, 0, -1);
+    } else if (command === Command.ACTIVATE_ITEM_DOWN) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_activate_item(opt_param, 0, 1);
+    } else if (command === Command.ACTIVATE_ITEM_LEFT) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_activate_item(opt_param, -1, 0);
+    } else if (command === Command.ACTIVATE_ITEM_RIGHT) {
+      console.assert(opt_param !== undefined);
+      this.current_floor.player_activate_item(opt_param, 1, 0);
     }
 
     this._end_player_turn(true);

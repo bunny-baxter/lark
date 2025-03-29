@@ -43,6 +43,7 @@ function get_char_for_item(template) {
   if (template === Content.ItemTemplate.POWERFUL_SWORD) return "|";
   if (template === Content.ItemTemplate.HEALING_HERB) return "%";
   if (template === Content.ItemTemplate.SWIMMING_RING || template === Content.ItemTemplate.FENCING_RING) return "o";
+  if (template === Content.ItemTemplate.ICE_WAND) return "!";
   return "X";
 }
 

@@ -243,3 +243,13 @@ test("eating cursed healing herb hurts", () => {
   game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
   expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp - Model.HEALING_HERB_CURSED_DAMAGE_AMOUNT);
 });
+
+test("attack with ice wand", () => {
+  const item_ref = floor.create_item(ItemTemplate.ICE_WAND, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  const enemy_ref = floor.create_actor(ActorTemplate.HERON, 1, 2);
+
+  const initial_hp = enemy_ref.current_hp;
+  game.execute_command(Model.Command.ACTIVATE_ITEM_DOWN, item_ref);
+  expect(enemy_ref.current_hp).toBeLessThan(initial_hp);
+});
