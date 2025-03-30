@@ -64,6 +64,10 @@ export function effect_ice_damage(actor_name) {
   return `${Util.capitalize(actor_name)} is hurt by magical cold.`;
 }
 
+export function effect_freeze_water() {
+  return "The water freezes solid.";
+}
+
 export function effect_gain_max_hp(actor_name) {
   return `${Util.capitalize(actor_name)} feels hearty.`;
 }

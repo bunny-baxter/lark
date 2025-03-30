@@ -61,12 +61,13 @@ export function get_char_for_cell_type(cell_type) {
   if (cell_type === Model.CellType.FLOWER_HAZARD) return "f";
   if (cell_type === Model.CellType.SHALLOW_WATER) return "~";
   if (cell_type === Model.CellType.DEEP_WATER) return "~";
+  if (cell_type === Model.CellType.ICE) return "=";
   return null;
 }
 
 export function get_visual_for_cell_type(cell_type) {
   let color = BasicColor.WHITE;
-  if (cell_type === Model.CellType.SHALLOW_WATER) {
+  if (cell_type === Model.CellType.SHALLOW_WATER || cell_type === Model.CellType.ICE) {
     color = BasicColor.CYAN;
   } else if (cell_type === Model.CellType.DEEP_WATER) {
     color = BasicColor.BLUE;

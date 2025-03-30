@@ -10,6 +10,7 @@ export const CellType = Object.freeze({
   FLOWER_HAZARD: Symbol("FLOWER_HAZARD"),
   SHALLOW_WATER: Symbol("SHALLOW_WATER"),
   DEEP_WATER: Symbol("DEEP_WATER"),
+  ICE: Symbol("ICE"),
 });
 
 export const Phase = Object.freeze({
@@ -381,7 +382,19 @@ export class Floor {
     }
   }
 
-  _run_item_effect(source_item, effect, target_actor) {
+  _run_item_effect_on_cell(source_item, effect, x, y) {
+    if (effect === ItemEffect.ICE_DAMAGE) {
+      const cell_type = this.get_cell_type(x, y);
+      if (cell_type === CellType.SHALLOW_WATER || cell_type === CellType.DEEP_WATER) {
+        this.parent_game.add_message(Messages.effect_freeze_water());
+        this.set_cell(x, y, CellType.ICE);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _run_item_effect_on_actor(source_item, effect, target_actor) {
     if (effect === ItemEffect.HEAL) {
       if (source_item.beatitude === Beatitude.CURSED) {
         this.parent_game.add_message(Messages.effect_cursed_herb(target_actor.template.display_name));
@@ -396,10 +409,14 @@ export class Floor {
           this.parent_game.add_message(Messages.effect_gain_max_hp(target_actor.template.display_name));
         }
       }
-    } else if (effect === ItemEffect.ICE_DAMAGE) {
+      return true;
+    }
+    if (effect === ItemEffect.ICE_DAMAGE) {
       this.parent_game.add_message(Messages.effect_ice_damage(target_actor.template.display_name));
       this._change_actor_hp(target_actor, -1 * ICE_WAND_DAMAGE_AMOUNT);
+      return true;
     }
+    return false;
   }
 
   player_consume_item(item_ref) {
@@ -407,7 +424,7 @@ export class Floor {
     console.assert(item_ref.template.consume_effect !== undefined);
 
     this.parent_game.add_message(Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name()));
-    this._run_item_effect(item_ref, item_ref.template.consume_effect, this.player_ref);
+    this._run_item_effect_on_actor(item_ref, item_ref.template.consume_effect, this.player_ref);
 
     item_ref.is_destroyed = true;
     Util.remove_first(this.items, item_ref);
@@ -427,14 +444,14 @@ export class Floor {
 
     let current_x = this.player_ref.tile_x;
     let current_y = this.player_ref.tile_y;
-    let did_hit_actor = false;
+    let something_happened = false;
     while (true) {
       current_x += delta_x;
       current_y += delta_y;
+      something_happened |= this._run_item_effect_on_cell(item_ref, item_ref.template.activate_effect, current_x, current_y);
       const hit_actors = this.find_actors_at(current_x, current_y);
       if (hit_actors.length) {
-        this._run_item_effect(item_ref, item_ref.template.activate_effect, hit_actors[0]);
-        did_hit_actor = true;
+        something_happened |= this._run_item_effect_on_actor(item_ref, item_ref.template.activate_effect, hit_actors[0]);
         break;
       }
       const cell_type = this.get_cell_type(current_x, current_y);
@@ -442,7 +459,7 @@ export class Floor {
         break;
       }
     }
-    if (!did_hit_actor) {
+    if (!something_happened) {
       this.parent_game.add_message(Messages.effect_nothing_happens());
     }
 

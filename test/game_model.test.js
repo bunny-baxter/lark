@@ -278,3 +278,13 @@ test("attack with ice wand", () => {
   game.execute_command(Model.Command.ACTIVATE_ITEM_DOWN, item_ref);
   expect(enemy_ref.current_hp).toBeLessThan(initial_hp);
 });
+
+test("ice wand freezes water", () => {
+  floor.set_cell(2, 1, Model.CellType.SHALLOW_WATER);
+  floor.set_cell(3, 1, Model.CellType.DEEP_WATER);
+  const item_ref = floor.create_item(ItemTemplate.ICE_WAND, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
+  expect(floor.get_cell_type(2, 1)).toBe(Model.CellType.ICE);
+  expect(floor.get_cell_type(3, 1)).toBe(Model.CellType.ICE);
+});
