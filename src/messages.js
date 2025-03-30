@@ -8,6 +8,14 @@ export function fight(attacker_name, attack_verb, defender_name) {
   return `${Util.capitalize(attacker_name)} ${attack_verb} ${defender_name}.`;
 }
 
+export function no_damage(attacker_name, defender_name) {
+  return `${Util.capitalize(defender_name)} is unhurt by ${attacker_name}.`;
+}
+
+export function generic_miss(attacker_name, defender_name) {
+  return `${Util.capitalize(attacker_name)} misses ${defender_name}.`;
+}
+
 export function die(actor_name) {
   return `${Util.capitalize(actor_name)} dies.`;
 }

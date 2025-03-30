@@ -216,6 +216,31 @@ test("sword increases player's attack power", () => {
   expect(heron_ref.current_hp).toBe(heron_starting_hp - (1 + ItemTemplate.ORDINARY_SWORD.equipped_attack_power));
 });
 
+test("cursed sword reduces luck", () => {
+  const sword_ref = floor.create_item(ItemTemplate.ORDINARY_SWORD, Model.Beatitude.CURSED, 1, 1);
+  expect(floor.player_ref.luck).toBe(0);
+  game.execute_command(Model.Command.GET_ITEM, sword_ref);
+  expect(floor.player_ref.luck).toBe(-1 * Model.CURSED_ITEM_LUCK_PENALTY);
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, sword_ref);
+  expect(floor.player_ref.luck).toBe(-1 * (Model.CURSED_ITEM_LUCK_PENALTY + Model.CURSED_EQUIPMENT_LUCK_PENALTY));
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, sword_ref);
+  expect(floor.player_ref.luck).toBe(-1 * Model.CURSED_ITEM_LUCK_PENALTY);
+  game.execute_command(Model.Command.DROP_ITEM, sword_ref);
+  expect(floor.player_ref.luck).toBe(0);
+});
+
+test("armor increases defense", () => {
+  const item_ref = floor.create_item(ItemTemplate.ORDINARY_CHAINMAIL, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  game.execute_command(Model.Command.TOGGLE_EQUIPMENT, item_ref);
+
+  const heron_ref = floor.create_actor(ActorTemplate.HERON, 2, 1);
+  const initial_hp = floor.player_ref.current_hp;
+  game.execute_command(Model.Command.PASS);
+  // Armor decreases damage to 0.
+  expect(floor.player_ref.current_hp).toBe(initial_hp);
+});
+
 test("eating healing herb heals", () => {
   const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.NEUTRAL, 1, 1);
   floor.player_ref.current_hp = 1;

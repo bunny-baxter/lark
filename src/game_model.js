@@ -24,6 +24,8 @@ export const Condition = Object.freeze({
 });
 
 export const FLOWER_HAZARD_CYCLE_LENGTH = 5;
+export const CURSED_ITEM_LUCK_PENALTY = 2;
+export const CURSED_EQUIPMENT_LUCK_PENALTY = 8;
 const HEALING_HERB_NEUTRAL_HEALING_AMOUNT = 20;
 export const HEALING_HERB_BLESSED_MAX_HP_BONUS = 2;
 export const HEALING_HERB_CURSED_DAMAGE_AMOUNT = 10;
@@ -45,6 +47,8 @@ export class Actor {
 
   current_hp;
   attack_power;
+  defense = 0;
+  luck = 0;
   conditions = new Map();
   skip_next_turn = false;
   inventory = null;
@@ -145,6 +149,26 @@ export class Item {
 
     return parts.join(" ");
   }
+
+  get_equipped_attack_power() {
+    let attack_power = this.template.equipped_attack_power;
+    if (this.beatitude === Beatitude.CURSED) {
+      attack_power -= 1;
+    } else if (this.beatitude === Beatitude.BLESSED) {
+      attack_power += 1;
+    }
+    return Math.max(0, attack_power);
+  }
+
+  get_equipped_defense() {
+    let defense = this.template.equipped_defense;
+    if (this.beatitude === Beatitude.CURSED) {
+      defense -= 1;
+    } else if (this.beatitude === Beatitude.BLESSED) {
+      defense += 1;
+    }
+    return Math.max(0, defense);
+  }
 }
 
 export class Floor {
@@ -235,13 +259,28 @@ export class Floor {
   }
 
   _actor_fight_actor(attacker_ref, defender_ref) {
-    if (attacker_ref.has_condition(Condition.DAZZLE) && Util.rand_int(4) === 0) {
-      this.parent_game.add_message(Messages.dazzle_miss(attacker_ref.template.display_name, defender_ref.template.display_name));
+    if (attacker_ref.has_condition(Condition.DAZZLE)) {
+      let dazzle_miss_chance = 25;
+      if (attacker_ref.luck > 0) {
+        dazzle_miss_chance -= attacker_ref.luck;
+      }
+      if (dazzle_miss_chance > 0 && Util.rand_int(100) < dazzle_miss_chance) {
+        this.parent_game.add_message(Messages.dazzle_miss(attacker_ref.template.display_name, defender_ref.template.display_name));
+        return;
+      }
+    }
+    if (attacker_ref.luck < 0 && Util.rand_int(100) < Math.abs(attacker_ref.luck)) {
+      this.parent_game.add_message(Messages.generic_miss(attacker_ref.template.display_name, defender_ref.template.display_name));
       return;
     }
-    this.parent_game.add_message(Messages.fight(
-      attacker_ref.template.display_name, attacker_ref.get_attack_verb(), defender_ref.template.display_name));
-    this._change_actor_hp(defender_ref, -1 * attacker_ref.attack_power);
+    const damage = Math.min(0, defender_ref.defense - attacker_ref.attack_power);
+    if (damage < 0) {
+      this.parent_game.add_message(Messages.fight(
+        attacker_ref.template.display_name, attacker_ref.get_attack_verb(), defender_ref.template.display_name));
+    } else {
+      this.parent_game.add_message(Messages.no_damage(attacker_ref.template.display_name, defender_ref.template.display_name));
+    }
+    this._change_actor_hp(defender_ref, damage);
   }
 
   actor_fight(actor_ref, delta_x, delta_y) {
@@ -289,6 +328,10 @@ export class Floor {
     this.parent_game.add_message(Messages.get_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = this.player_ref;
     this.player_ref.inventory.push(item_ref);
+
+    if (item_ref.beatitude === Beatitude.CURSED) {
+      this.player_ref.luck -= CURSED_ITEM_LUCK_PENALTY;
+    }
   }
 
   player_drop_item(item_ref) {
@@ -300,6 +343,10 @@ export class Floor {
     this.parent_game.add_message(Messages.drop_item(this.player_ref.template.display_name, item_ref.get_name()));
     item_ref.held_actor = null;
     Util.remove_first(this.player_ref.inventory, item_ref);
+
+    if (item_ref.beatitude === Beatitude.CURSED) {
+      this.player_ref.luck += CURSED_ITEM_LUCK_PENALTY;
+    }
   }
 
   player_toggle_equipment(item_ref) {
@@ -308,7 +355,11 @@ export class Floor {
     if (item_ref.equipped) {
       this.parent_game.add_message(Messages.unequip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
       item_ref.equipped = false;
-      this.player_ref.attack_power -= item_ref.template.equipped_attack_power;
+      this.player_ref.attack_power -= item_ref.get_equipped_attack_power();
+      this.player_ref.defense -= item_ref.get_equipped_defense();
+      if (item_ref.beatitude  === Beatitude.CURSED) {
+        this.player_ref.luck += CURSED_EQUIPMENT_LUCK_PENALTY;
+      }
     } else {
       let old_item = null;
       for (const other_item of this.player_ref.inventory) {
@@ -322,7 +373,11 @@ export class Floor {
       }
       this.parent_game.add_message(Messages.equip_item(this.player_ref.template.display_name, item_ref.get_name(), item_ref.template.equipment_slot));
       item_ref.equipped = true;
-      this.player_ref.attack_power += item_ref.template.equipped_attack_power;
+      this.player_ref.attack_power += item_ref.get_equipped_attack_power();
+      this.player_ref.defense += item_ref.get_equipped_defense();
+      if (item_ref.beatitude  === Beatitude.CURSED) {
+        this.player_ref.luck -= CURSED_EQUIPMENT_LUCK_PENALTY;
+      }
     }
   }
 
@@ -563,10 +618,13 @@ export class Game {
     this.current_floor.set_cell(4, 1, CellType.FLOWER_HAZARD);
 
     this.current_floor.create_actor(ActorTemplate.HERON, 5, 1);
+    this.current_floor.create_actor(ActorTemplate.HERON, 6, 1);
+    this.current_floor.create_actor(ActorTemplate.HERON, 7, 1);
+    this.current_floor.create_actor(ActorTemplate.HERON, 7, 2);
     this.current_floor.create_actor(ActorTemplate.STARLIGHT_FAIRY, 4, 5);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 1, 2);
-    this.current_floor.create_item(ItemTemplate.POWERFUL_SWORD, Beatitude.NEUTRAL, 2, 2);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_CHAINMAIL, Beatitude.CURSED, 2, 1);
     this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.NEUTRAL, 2, 2);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.CURSED, 1, 3);

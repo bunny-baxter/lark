@@ -78,14 +78,19 @@ class ItemTemplateEntry {
   equipment_slot;
   weapon_attack_verb;
   equipped_attack_power;
+  equipped_defense;
   equipped_special_effect;
   consume_effect;
+  activate_effect;
+  activate_targeting;
+  activate_charges;
 
   constructor(config) {
     this.display_name = config.display_name;
     this.equipment_slot = config.equipment_slot || null;
     this.weapon_attack_verb = config.weapon_attack_verb || null;
     this.equipped_attack_power = config.equipped_attack_power || 0;
+    this.equipped_defense = config.equipped_defense || 0;
     this.equipped_special_effect = config.equipped_special_effect || null;
     this.consume_effect = config.consume_effect || null;
     this.activate_effect = config.activate_effect || null;
@@ -112,6 +117,12 @@ export const ItemTemplate = Object.freeze({
     equipment_slot: "weapon",
     weapon_attack_verb: "slashes",
     equipped_attack_power: 4,
+  }),
+
+  ORDINARY_CHAINMAIL: new ItemTemplateEntry({
+    display_name: "steel chainmail",
+    equipment_slot: "body",
+    equipped_defense: 2,
   }),
 
   HEALING_HERB: new ItemTemplateEntry({
