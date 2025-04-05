@@ -288,3 +288,19 @@ test("ice wand freezes water", () => {
   expect(floor.get_cell_type(2, 1)).toBe(Model.CellType.ICE);
   expect(floor.get_cell_type(3, 1)).toBe(Model.CellType.ICE);
 });
+
+test("knife harvests berries", () => {
+  const item_ref = floor.create_item(ItemTemplate.STEEL_KNIFE, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+  const shrub_ref = floor.create_actor(ActorTemplate.BERRY_SHRUB, 2, 1);
+
+  expect(floor.find_loose_items_at(1, 1).length).toBe(0);
+  game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
+  const berries = floor.find_loose_items_at(1, 1);
+  expect(berries.length).toBe(3);
+  expect(berries[0].template).toBe(ItemTemplate.DARKBERRY);
+
+  // Second harvest does nothing.
+  game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
+  expect(floor.find_loose_items_at(1, 1).length).toBe(3);
+});

@@ -1,4 +1,4 @@
-import {ActorBehavior, ActorTemplate, EquippedSpecialEffect, ItemEffect, ItemTemplate} from './content.js';
+import {ActorBehavior, ActorTemplate, EquippedSpecialEffect, ItemActivateRange, ItemEffect, ItemTemplate} from './content.js';
 import * as Messages from './messages.js';
 import * as Util from './util.js';
 
@@ -6,6 +6,8 @@ export const CellType = Object.freeze({
   OUT_OF_BOUNDS: Symbol("OUT_OF_BOUNDS"),
   EMPTY: Symbol("EMPTY"),
   FLOOR: Symbol("FLOOR"),
+  MOSS: Symbol("MOSS"),
+  THYME: Symbol("THYME"),
   DEFAULT_WALL: Symbol("DEFAULT_WALL"),
   FLOWER_HAZARD: Symbol("FLOWER_HAZARD"),
   SHALLOW_WATER: Symbol("SHALLOW_WATER"),
@@ -48,11 +50,12 @@ export class Actor {
 
   current_hp;
   attack_power;
-  defense = 0;
+  defense;
   luck = 0;
   conditions = new Map();
   skip_next_turn = false;
   inventory = null;
+  is_harvested = false;
   is_dead = false;
 
   constructor(id, template) {
@@ -62,6 +65,7 @@ export class Actor {
     this.max_hp = template.max_hp;
     this.current_hp = template.max_hp;
     this.attack_power = template.starting_attack_power;
+    this.defense = template.starting_defense;
     // Only the player has an inventory for now.
     if (template === ActorTemplate.PLAYER) {
       this.inventory = [];
@@ -394,10 +398,10 @@ export class Floor {
     return false;
   }
 
-  _run_item_effect_on_actor(source_item, effect, target_actor) {
+  _run_item_effect_on_actor(source_item, effect, source_actor, target_actor) {
     if (effect === ItemEffect.HEAL) {
       if (source_item.beatitude === Beatitude.CURSED) {
-        this.parent_game.add_message(Messages.effect_cursed_herb(target_actor.template.display_name));
+        this.parent_game.add_message(Messages.effect_cursed_heal(target_actor.template.display_name));
         this._change_actor_hp(target_actor, -1 * HEALING_HERB_CURSED_DAMAGE_AMOUNT);
       } else {
         if (source_item.beatitude === Beatitude.BLESSED) {
@@ -411,9 +415,39 @@ export class Floor {
       }
       return true;
     }
+    if (effect === ItemEffect.HEAL_FOOD) {
+      const heal_amount = source_item.beatitude === Beatitude.BLESSED ? 6 : 4;
+      if (source_item.beatitude === Beatitude.CURSED) {
+        this.parent_game.add_message(Messages.effect_cursed_heal(target_actor.template.display_name));
+        this._change_actor_hp(target_actor, -1 * heal_amount);
+      } else {
+        this.parent_game.add_message(Messages.effect_heals(target_actor.template.display_name));
+        this._change_actor_hp(target_actor, heal_amount);
+      }
+      return true;
+
+    }
     if (effect === ItemEffect.ICE_DAMAGE) {
       this.parent_game.add_message(Messages.effect_ice_damage(target_actor.template.display_name));
       this._change_actor_hp(target_actor, -1 * ICE_WAND_DAMAGE_AMOUNT);
+      return true;
+    }
+    if (effect === ItemEffect.BASIC_HARVEST || effect === ItemEffect.MAGIC_HARVEST) {
+      if (target_actor.template.basic_harvest_item == null || target_actor.template.magic_harvest_item == null) {
+        return false;
+      }
+      this.parent_game.add_message(Messages.effect_harvest(source_actor.template.display_name, target_actor.template.display_name));
+      if (target_actor.is_harvested) {
+        this.parent_game.add_message(Messages.effect_harvest_empty(target_actor.template.display_name));
+      } else {
+        const item_config = effect === ItemEffect.BASIC_HARVEST ? target_actor.template.basic_harvest_item : target_actor.template.magic_harvest_item;
+        const split = item_config.split("-");
+        for (let i = 0; i < Number(split[1]); i++) {
+          const item = this.create_item(ItemTemplate[split[0]], source_item.beatitude, source_actor.tile_x, source_actor.tile_y);
+          this.parent_game.add_message(Messages.effect_harvest_create_item(source_actor.template.display_name, item.get_name()));
+        }
+        target_actor.is_harvested = true;
+      }
       return true;
     }
     return false;
@@ -424,7 +458,7 @@ export class Floor {
     console.assert(item_ref.template.consume_effect !== undefined);
 
     this.parent_game.add_message(Messages.consume_item_prefix(this.player_ref.template.display_name, item_ref.get_name()));
-    this._run_item_effect_on_actor(item_ref, item_ref.template.consume_effect, this.player_ref);
+    this._run_item_effect_on_actor(item_ref, item_ref.template.consume_effect, this.player_ref, this.player_ref);
 
     item_ref.is_destroyed = true;
     Util.remove_first(this.items, item_ref);
@@ -436,7 +470,11 @@ export class Floor {
     console.assert(item_ref.template.activate_effect !== undefined);
     console.assert((Math.abs(delta_x) === 1 && delta_y === 0) || (delta_x === 0 && Math.abs(delta_y) === 1));
 
-    this.parent_game.add_message(Messages.activate_wand(this.player_ref.template.display_name, item_ref.get_name()));
+    if (item_ref.template.activate_range === ItemActivateRange.INFINITE) {
+      this.parent_game.add_message(Messages.activate_wand(this.player_ref.template.display_name, item_ref.get_name()));
+    } else {
+      this.parent_game.add_message(Messages.activate_nonmagical(this.player_ref.template.display_name, item_ref.get_name()));
+    }
     if (item_ref.remaining_charges === 0) {
       this.parent_game.add_message(Messages.effect_nothing_happens());
       return;
@@ -451,7 +489,10 @@ export class Floor {
       something_happened |= this._run_item_effect_on_cell(item_ref, item_ref.template.activate_effect, current_x, current_y);
       const hit_actors = this.find_actors_at(current_x, current_y);
       if (hit_actors.length) {
-        something_happened |= this._run_item_effect_on_actor(item_ref, item_ref.template.activate_effect, hit_actors[0]);
+        something_happened |= this._run_item_effect_on_actor(item_ref, item_ref.template.activate_effect, this.player_ref, hit_actors[0]);
+        break;
+      }
+      if (item_ref.template.activate_range === ItemActivateRange.ADJACENT) {
         break;
       }
       const cell_type = this.get_cell_type(current_x, current_y);
@@ -522,6 +563,10 @@ export class Floor {
 
     if (actor.skip_next_turn) {
       actor.skip_next_turn = false;
+      return;
+    }
+
+    if (actor.template.behavior === ActorBehavior.PASSIVE) {
       return;
     }
 
@@ -668,6 +713,19 @@ export class Game {
     this.current_floor.set_cell(1, 5, CellType.DEEP_WATER);
     this.current_floor.set_cell(2, 5, CellType.DEEP_WATER);
     this.current_floor.set_cell(3, 5, CellType.DEEP_WATER);
+  }
+
+  populate_test_level_3() {
+    for (let i = 0; i < 12; i++) {
+      this.current_floor.set_cell(i % 4 + 2, Math.floor(i / 4) + 1, CellType.MOSS);
+      this.current_floor.set_cell(i % 4 + 2, Math.floor(i / 4) + 5, CellType.THYME);
+    }
+
+    this.current_floor.create_actor(ActorTemplate.BERRY_SHRUB, 1, 3);
+    this.current_floor.create_actor(ActorTemplate.BERRY_SHRUB, 2, 3);
+    this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 2, 1);
+    this.current_floor.create_item(ItemTemplate.STEEL_KNIFE, Beatitude.NEUTRAL, 3, 1);
+    this.current_floor.create_item(ItemTemplate.SILVER_KNIFE, Beatitude.NEUTRAL, 4, 1);
   }
 
   _end_player_turn(allow_skip_turn) {

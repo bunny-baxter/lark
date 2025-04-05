@@ -18,6 +18,8 @@ if (test_level_index == null || test_level_index === 1) {
   game.populate_test_level_1();
 } else if (test_level_index === 2) {
   game.populate_test_level_2();
+} else if (test_level_index === 3) {
+  game.populate_test_level_3();
 } else {
   console.error(`No test level with index ${test_level_index}`);
   process.exit(1);
@@ -70,6 +72,8 @@ const ColorChars = Object.freeze({
   [UiShared.BasicColor.MAGENTA]: "M",
   [UiShared.BasicColor.CYAN]: "C",
   [UiShared.BasicColor.BLUE]: "b",
+  [UiShared.BasicColor.YELLOW_GREEN]: "y",
+  [UiShared.BasicColor.BLUE_GREEN]: "g",
 });
 
 
@@ -149,7 +153,7 @@ function update_terminal() {
   }
 
   if (activating_item) {
-    terminal.moveTo(21, 12, `Which direction do you wave the ${activating_item.get_name()}?`);
+    terminal.moveTo(21, 12, `In which direction do you use the ${activating_item.get_name()}?`);
   } else if (inventory_menu) {
     inventory_menu.update_terminal();
   }

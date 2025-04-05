@@ -52,11 +52,27 @@ export function activate_wand(actor_name, item_name) {
   return `${Util.capitalize(actor_name)} waves the ${item_name}.`;
 }
 
+export function activate_nonmagical(actor_name, item_name) {
+  return `${Util.capitalize(actor_name)} uses the ${item_name}.`;
+}
+
+export function effect_harvest(actor_name, target_name) {
+  return `${Util.capitalize(actor_name)} harvests from the ${target_name}.`;
+}
+
+export function effect_harvest_create_item(actor_name, item_name) {
+  return `${Util.capitalize(actor_name)} finds a ${item_name}.`;
+}
+
+export function effect_harvest_empty(target_name) {
+  return `But the ${target_name} is empty.`;
+}
+
 export function effect_heals(actor_name) {
   return `${Util.capitalize(actor_name)}'s hp is restored.`;
 }
 
-export function effect_cursed_herb(actor_name) {
+export function effect_cursed_heal(actor_name) {
   return `The curse drains ${actor_name}'s hp.`;
 }
 

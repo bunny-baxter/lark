@@ -9,6 +9,8 @@ export const BasicColor = Object.freeze({
   MAGENTA: Symbol("MAGENTA"),
   CYAN: Symbol("CYAN"),
   BLUE: Symbol("BLUE"),
+  YELLOW_GREEN: Symbol("YELLOW_GREEN"),
+  BLUE_GREEN: Symbol("BLUE_GREEN"),
 });
 
 const ConditionLabels = Object.freeze({
@@ -29,11 +31,16 @@ function get_char_for_actor(template) {
   if (template === Content.ActorTemplate.HERON) return "h";
   if (template === Content.ActorTemplate.STARLIGHT_FAIRY) return "y";
   if (template === Content.ActorTemplate.MERMAID) return "m";
+  if (template === Content.ActorTemplate.BERRY_SHRUB) return "b";
   return "X";
 }
 
 export function get_visual_for_actor(template) {
-  return new CellVisual(get_char_for_actor(template), BasicColor.YELLOW);
+  let color = BasicColor.YELLOW;
+  if (template === Content.ActorTemplate.BERRY_SHRUB) {
+    color = BasicColor.BLUE_GREEN;
+  }
+  return new CellVisual(get_char_for_actor(template), color);
 }
 
 
@@ -45,6 +52,8 @@ function get_char_for_item(template) {
   if (template === Content.ItemTemplate.HEALING_HERB) return "%";
   if (template === Content.ItemTemplate.SWIMMING_RING || template === Content.ItemTemplate.FENCING_RING) return "o";
   if (template === Content.ItemTemplate.ICE_WAND) return "!";
+  if (template === Content.ItemTemplate.STEEL_KNIFE || template === Content.ItemTemplate.SILVER_KNIFE) return "-";
+  if (template === Content.ItemTemplate.DARKBERRY) return ":";
   return "X";
 }
 
@@ -57,6 +66,8 @@ export const FLOWER_HAZARD_ACTIVE_CHAR = get_char_for_cell_type(Model.CellType.F
 
 export function get_char_for_cell_type(cell_type) {
   if (cell_type === Model.CellType.FLOOR) return ".";
+  if (cell_type === Model.CellType.MOSS) return ",";
+  if (cell_type === Model.CellType.THYME) return "\"";
   if (cell_type === Model.CellType.DEFAULT_WALL) return "#";
   if (cell_type === Model.CellType.FLOWER_HAZARD) return "f";
   if (cell_type === Model.CellType.SHALLOW_WATER) return "~";
@@ -71,6 +82,10 @@ export function get_visual_for_cell_type(cell_type) {
     color = BasicColor.CYAN;
   } else if (cell_type === Model.CellType.DEEP_WATER) {
     color = BasicColor.BLUE;
+  } else if (cell_type === Model.CellType.MOSS) {
+    color = BasicColor.BLUE_GREEN;
+  } else if (cell_type === Model.CellType.THYME) {
+    color = BasicColor.YELLOW_GREEN;
   }
   return new CellVisual(get_char_for_cell_type(cell_type), color);
 }

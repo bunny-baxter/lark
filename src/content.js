@@ -1,5 +1,6 @@
 export const ActorBehavior = Object.freeze({
   PLAYER_INPUT: Symbol("PLAYER_INPUT"),
+  PASSIVE: Symbol("PASSIVE"),
   PATROL_VERTICALLY: Symbol("PATROL_VERTICALLY"),
   INFLICT_DAZZLE: Symbol("INFLICT_DAZZLE"),
   APPROACH_WHEN_NEAR: Symbol("APPROACH_WHEN_NEAR"),
@@ -11,7 +12,10 @@ class ActorTemplateEntry {
   behavior;
   max_hp;
   starting_attack_power;
+  starting_defense;
   swims;
+  basic_harvest_item;
+  magic_harvest_item;
 
   constructor(config) {
     this.display_name = config.display_name;
@@ -19,7 +23,10 @@ class ActorTemplateEntry {
     this.behavior = config.behavior;
     this.max_hp = config.max_hp;
     this.starting_attack_power = config.starting_attack_power
+    this.starting_defense = config.starting_defense || 0;
     this.swims = !!config.swims;
+    this.basic_harvest_item = config.basic_harvest_item;
+    this.magic_harvest_item = config.magic_harvest_item;
   }
 }
 
@@ -58,15 +65,32 @@ export const ActorTemplate = Object.freeze({
     swims: true,
   }),
 
+  BERRY_SHRUB: new ActorTemplateEntry({
+    display_name: "darkberry shrub",
+    behavior: ActorBehavior.PASSIVE,
+    max_hp: 6,
+    starting_defense: 1,
+    basic_harvest_item: "DARKBERRY-3",
+    magic_harvest_item: "DARKBERRY-5",
+  }),
+
 });
 
 export const ItemEffect = Object.freeze({
+  BASIC_HARVEST: Symbol("BASIC_HARVEST"),
+  MAGIC_HARVEST: Symbol("MAGIC_HARVEST"),
   HEAL: Symbol("HEAL"),
+  HEAL_FOOD: Symbol("HEAL_FOOD"),
   ICE_DAMAGE: Symbol("ICE_DAMAGE"),
 });
 
 export const ItemActivateTargeting = Object.freeze({
   DIRECTION: Symbol("DIRECTION"),
+});
+
+export const ItemActivateRange = Object.freeze({
+  ADJACENT: Symbol("ADJACENT"),
+  INFINITE: Symbol("INFINITE"),
 });
 
 export const EquippedSpecialEffect = Object.freeze({
@@ -83,6 +107,7 @@ class ItemTemplateEntry {
   consume_effect;
   activate_effect;
   activate_targeting;
+  activate_range;
   activate_charges;
 
   constructor(config) {
@@ -95,6 +120,7 @@ class ItemTemplateEntry {
     this.consume_effect = config.consume_effect || null;
     this.activate_effect = config.activate_effect || null;
     this.activate_targeting = config.activate_targeting || null;
+    this.activate_range = config.activate_range || ItemActivateRange.INFINITE;
     this.activate_charges = config.activate_charges || -1;
   }
 }
@@ -130,6 +156,11 @@ export const ItemTemplate = Object.freeze({
     consume_effect: ItemEffect.HEAL,
   }),
 
+  DARKBERRY: new ItemTemplateEntry({
+    display_name: "darkberry",
+    consume_effect: ItemEffect.HEAL_FOOD,
+  }),
+
   SWIMMING_RING: new ItemTemplateEntry({
     display_name: "ring of swimming",
     equipment_slot: "ring",
@@ -147,6 +178,26 @@ export const ItemTemplate = Object.freeze({
     activate_effect: ItemEffect.ICE_DAMAGE,
     activate_targeting: ItemActivateTargeting.DIRECTION,
     activate_charges: 5,
+  }),
+
+  STEEL_KNIFE: new ItemTemplateEntry({
+    display_name: "steel knife",
+    equipment_slot: "weapon",
+    weapon_attack_verb: "stabs",
+    equipped_attack_power: 1,
+    activate_effect: ItemEffect.BASIC_HARVEST,
+    activate_targeting: ItemActivateTargeting.DIRECTION,
+    activate_range: ItemActivateRange.ADJACENT,
+  }),
+
+  SILVER_KNIFE: new ItemTemplateEntry({
+    display_name: "silver knife",
+    equipment_slot: "weapon",
+    weapon_attack_verb: "stabs",
+    equipped_attack_power: 1,
+    activate_effect: ItemEffect.MAGIC_HARVEST,
+    activate_targeting: ItemActivateTargeting.DIRECTION,
+    activate_range: ItemActivateRange.ADJACENT,
   }),
 
 });
