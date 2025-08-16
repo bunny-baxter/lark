@@ -242,7 +242,7 @@ test("armor increases defense", () => {
 });
 
 test("eating healing herb heals", () => {
-  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.NEUTRAL, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Model.Beatitude.NEUTRAL, 1, 1);
   floor.player_ref.current_hp = 1;
   expect(item_ref.is_destroyed).toBe(false);
   game.execute_command(Model.Command.GET_ITEM, item_ref);
@@ -254,7 +254,7 @@ test("eating healing herb heals", () => {
 });
 
 test("eating blessed healing herb adds max hp", () => {
-  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.BLESSED, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Model.Beatitude.BLESSED, 1, 1);
   const initial_max_hp = floor.player_ref.max_hp;
   game.execute_command(Model.Command.GET_ITEM, item_ref);
   game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
@@ -263,7 +263,7 @@ test("eating blessed healing herb adds max hp", () => {
 });
 
 test("eating cursed healing herb hurts", () => {
-  const item_ref = floor.create_item(ItemTemplate.HEALING_HERB, Model.Beatitude.CURSED, 1, 1);
+  const item_ref = floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Model.Beatitude.CURSED, 1, 1);
   game.execute_command(Model.Command.GET_ITEM, item_ref);
   game.execute_command(Model.Command.CONSUME_ITEM, item_ref);
   expect(floor.player_ref.current_hp).toBe(floor.player_ref.max_hp - Model.HEALING_HERB_CURSED_DAMAGE_AMOUNT);
@@ -303,4 +303,21 @@ test("knife harvests berries", () => {
   // Second harvest does nothing.
   game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
   expect(floor.find_loose_items_at(1, 1).length).toBe(3);
+});
+
+// Code is different for harvesting from cells instead of actors, so we want to test both.
+test("knife harvests flowers", () => {
+  floor.set_cell(2, 1, Model.CellType.BLOODFLOWER_PLANT);
+  const item_ref = floor.create_item(ItemTemplate.STEEL_KNIFE, Model.Beatitude.NEUTRAL, 1, 1);
+  game.execute_command(Model.Command.GET_ITEM, item_ref);
+
+  expect(floor.find_loose_items_at(1, 1).length).toBe(0);
+  game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
+  const items = floor.find_loose_items_at(1, 1);
+  expect(items.length).toBe(1);
+  expect(items[0].template).toBe(ItemTemplate.FRESH_BLOODFLOWER);
+
+  // Second harvest does nothing.
+  game.execute_command(Model.Command.ACTIVATE_ITEM_RIGHT, item_ref);
+  expect(floor.find_loose_items_at(1, 1).length).toBe(1);
 });

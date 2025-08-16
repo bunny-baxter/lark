@@ -151,9 +151,24 @@ export const ItemTemplate = Object.freeze({
     equipped_defense: 2,
   }),
 
-  HEALING_HERB: new ItemTemplateEntry({
-    display_name: "healing herb",
-    consume_effect: ItemEffect.HEAL,
+  FRESH_BLOODFLOWER: new ItemTemplateEntry({
+    display_name: "bloodflower",
+    consume_effect: ItemEffect.HEAL_10,
+  }),
+
+  PRISTINE_BLOODFLOWER: new ItemTemplateEntry({
+    display_name: "pristine bloodflower",
+    consume_effect: ItemEffect.HEAL_13,
+  }),
+
+  DRIED_BLOODFLOWER: new ItemTemplateEntry({
+    display_name: "dried bloodflower",
+    consume_effect: ItemEffect.HEAL_20,
+  }),
+
+  DRIED_PRISTINE_BLOODFLOWER: new ItemTemplateEntry({
+    display_name: "dried pristine bloodflower",
+    consume_effect: ItemEffect.HEAL_26,
   }),
 
   DARKBERRY: new ItemTemplateEntry({

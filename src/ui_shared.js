@@ -5,6 +5,7 @@ import * as Model from './game_model.js';
 export const BasicColor = Object.freeze({
   WHITE: Symbol("WHITE"),
   YELLOW: Symbol("YELLOW"),
+  RED: Symbol("RED"),
   GRAY: Symbol("GRAY"),
   MAGENTA: Symbol("MAGENTA"),
   CYAN: Symbol("CYAN"),
@@ -49,7 +50,7 @@ function get_char_for_item(template) {
   if (template === Content.ItemTemplate.ORDINARY_SWORD) return "/";
   if (template === Content.ItemTemplate.POWERFUL_SWORD) return "|";
   if (template === Content.ItemTemplate.ORDINARY_CHAINMAIL) return "[";
-  if (template === Content.ItemTemplate.HEALING_HERB) return "%";
+  if (template === Content.ItemTemplate.DRIED_BLOODFLOWER) return "%";
   if (template === Content.ItemTemplate.SWIMMING_RING || template === Content.ItemTemplate.FENCING_RING) return "o";
   if (template === Content.ItemTemplate.ICE_WAND) return "!";
   if (template === Content.ItemTemplate.STEEL_KNIFE || template === Content.ItemTemplate.SILVER_KNIFE) return "-";
@@ -68,6 +69,7 @@ export function get_char_for_cell_type(cell_type) {
   if (cell_type === Model.CellType.FLOOR) return ".";
   if (cell_type === Model.CellType.MOSS) return ",";
   if (cell_type === Model.CellType.THYME) return "\"";
+  if (cell_type === Model.CellType.BLOODFLOWER_PLANT) return "\"";
   if (cell_type === Model.CellType.DEFAULT_WALL) return "#";
   if (cell_type === Model.CellType.FLOWER_HAZARD) return "f";
   if (cell_type === Model.CellType.SHALLOW_WATER) return "~";
@@ -86,6 +88,8 @@ export function get_visual_for_cell_type(cell_type) {
     color = BasicColor.BLUE_GREEN;
   } else if (cell_type === Model.CellType.THYME) {
     color = BasicColor.YELLOW_GREEN;
+  } else if (cell_type === Model.CellType.BLOODFLOWER_PLANT) {
+    color = BasicColor.RED;
   }
   return new CellVisual(get_char_for_cell_type(cell_type), color);
 }

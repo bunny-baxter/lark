@@ -8,6 +8,7 @@ export const CellType = Object.freeze({
   FLOOR: Symbol("FLOOR"),
   MOSS: Symbol("MOSS"),
   THYME: Symbol("THYME"),
+  BLOODFLOWER_PLANT: Symbol("BLOODFLOWER_PLANT"),
   DEFAULT_WALL: Symbol("DEFAULT_WALL"),
   FLOWER_HAZARD: Symbol("FLOWER_HAZARD"),
   SHALLOW_WATER: Symbol("SHALLOW_WATER"),
@@ -687,13 +688,13 @@ export class Game {
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.NEUTRAL, 1, 2);
     this.current_floor.create_item(ItemTemplate.ORDINARY_CHAINMAIL, Beatitude.CURSED, 2, 1);
-    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.NEUTRAL, 2, 2);
+    this.current_floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Beatitude.NEUTRAL, 2, 2);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.CURSED, 1, 3);
-    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.CURSED, 2, 3);
+    this.current_floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Beatitude.CURSED, 2, 3);
 
     this.current_floor.create_item(ItemTemplate.ORDINARY_SWORD, Beatitude.BLESSED, 1, 4);
-    this.current_floor.create_item(ItemTemplate.HEALING_HERB, Beatitude.BLESSED, 2, 4);
+    this.current_floor.create_item(ItemTemplate.DRIED_BLOODFLOWER, Beatitude.BLESSED, 2, 4);
   }
 
   populate_test_level_2() {
@@ -720,6 +721,9 @@ export class Game {
       this.current_floor.set_cell(i % 4 + 2, Math.floor(i / 4) + 1, CellType.MOSS);
       this.current_floor.set_cell(i % 4 + 2, Math.floor(i / 4) + 5, CellType.THYME);
     }
+
+    this.current_floor.set_cell(2, 2, CellType.BLOODFLOWER_PLANT);
+    this.current_floor.set_cell(3, 2, CellType.BLOODFLOWER_PLANT);
 
     this.current_floor.create_actor(ActorTemplate.BERRY_SHRUB, 1, 3);
     this.current_floor.create_actor(ActorTemplate.BERRY_SHRUB, 2, 3);
