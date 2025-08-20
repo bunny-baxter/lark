@@ -1,0 +1,13 @@
+[package]
+name = "rust"
+version = "0.1.0"
+edition = "2024"
+
+[profile.dev.package.backtrace]
+opt-level = 3
+
+[dependencies]
+cgmath = "0.18.0"
+color-eyre = "0.6.5"
+crossterm = "0.29.0"
+ratatui = "0.29.0"
