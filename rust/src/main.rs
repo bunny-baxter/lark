@@ -26,7 +26,7 @@ fn display_for_cell_type(cell_type: CellType) -> CellDisplay {
     match cell_type {
         CellType::OutOfBounds | CellType::Empty => CellDisplay { c: ' ', fg_color: Color::Reset, bg_color: Color::Black },
         CellType::Floor => CellDisplay { c: '.', fg_color: Color::White, bg_color: Color::Black },
-        CellType::DefaultWall => CellDisplay { c: '#', fg_color: Color::White, bg_color: Color::Black },
+        CellType::DefaultWall => CellDisplay { c: '#', fg_color: Color::Black, bg_color: Color::White },
     }
 }
 
@@ -91,7 +91,6 @@ impl Widget for &TerminalApp {
         for y in 0..(self.game.current_room.size.y as i32) {
             let mut char_vec = vec![];
             for x in 0..(self.game.current_room.size.x as i32) {
-                char_vec.push(" ".on_black());
                 let actors = self.game.current_room.find_actors_at(vec2(x, y));
                 if actors.len() > 0 {
                     char_vec.push("@".light_yellow().on_black());
@@ -99,7 +98,6 @@ impl Widget for &TerminalApp {
                     let display = display_for_cell_type(self.game.current_room.get_cell_type(vec2(x, y)));
                     char_vec.push(Span::styled(display.c.to_string(), Style::default().fg(display.fg_color).bg(display.bg_color)));
                 }
-                char_vec.push(" ".on_black());
             }
             lines_vec.push(Line::from(char_vec));
         }
@@ -107,7 +105,7 @@ impl Widget for &TerminalApp {
         Paragraph::new(text)
             .centered()
             .block(block)
-            .render(Rect::new(0, 0, 31, 13), buf);
+            .render(Rect::new(0, 0, 23, 13), buf);
     }
 }
 

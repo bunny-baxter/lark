@@ -127,7 +127,7 @@ pub struct GameInstance {
 impl GameInstance {
     pub fn new() -> Self {
         GameInstance {
-            current_room: create_blank_room(vec2(9, 9)),
+            current_room: create_blank_room(vec2(13, 9)),
         }
     }
 
