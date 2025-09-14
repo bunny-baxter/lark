@@ -28,7 +28,9 @@ impl Default for Cell {
 #[derive(Debug)]
 pub struct Actor {
     id: u32,
+    pub actor_type: ActorType,
     position: TilePoint,
+    ai_data: i32,
 }
 
 #[derive(Debug)]
@@ -55,13 +57,20 @@ impl Room {
         }
     }
 
-    fn create_actor(&mut self, position: TilePoint) {
-        self.actors.push(Actor { id: self.next_actor_id, position });
+    pub fn create_actor(&mut self, actor_type: ActorType, position: TilePoint) -> u32 {
+        let id = self.next_actor_id;
+        self.actors.push(Actor {
+            id,
+            actor_type,
+            position,
+            ai_data: 0,
+        });
         self.next_actor_id += 1;
+        id
     }
 
     pub fn create_player(&mut self, position: TilePoint) {
-        self.create_actor(position);
+        self.create_actor(ActorType::Player, position);
         self.player_index = self.actors.len() - 1;
     }
 
@@ -75,11 +84,35 @@ impl Room {
         result
     }
 
+    pub fn get_actor(&self, actor_id: u32) -> Option<&Actor> {
+        self.actors.iter().find(|a| a.id == actor_id)
+    }
+
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
         if position.x < 0 || position.y < 0 || position.x as usize >= self.size.x || position.y as usize >= self.size.y {
             return CellType::OutOfBounds;
         }
         self.cells[position.x as usize][position.y as usize].cell_type
+    }
+
+    fn run_monster_turn(&mut self, index: usize) {
+        match self.actors[index].actor_type {
+            ActorType::Player => (),
+            ActorType::Toad => {
+                let walk_deta = match self.actors[index].ai_data {
+                    0 => vec2(1, 0),
+                    1 => vec2(0, 1),
+                    2 => vec2(-1, 0),
+                    3 => vec2(0, -1),
+                    _ => unreachable!(),
+                };
+                self.actor_walk(index, walk_deta);
+                self.actors[index].ai_data += 1;
+                if self.actors[index].ai_data > 3 {
+                    self.actors[index].ai_data = 0;
+                }
+            },
+        }
     }
 
     fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) {
@@ -117,6 +150,7 @@ fn create_blank_room(size: TileSize) -> Room {
 
 #[derive(Copy, Clone, Debug)]
 pub enum Command {
+    Wait,
     Walk { delta: TileDelta },
 }
 
@@ -132,9 +166,15 @@ impl GameInstance {
     }
 
     pub fn execute_command(&mut self, command: Command) {
-        match command {
+        let turn_ended = match command {
+            Command::Wait => true,
             Command::Walk { delta } => self.current_room.actor_walk(self.current_room.player_index, delta),
         };
+        if turn_ended {
+            for i in 0..self.current_room.actors.len() {
+                self.current_room.run_monster_turn(i);
+            }
+        }
     }
 }
 
@@ -154,7 +194,7 @@ mod tests {
     #[test]
     fn test_create_actors() {
         let mut room = Room::new(vec2(4, 5));
-        room.create_actor(vec2(0, 0));
+        room.create_actor(ActorType::Toad, vec2(0, 0));
         room.create_player(vec2(1, 0));
         assert_eq!(room.actors.len(), 2);
         assert_ne!(room.actors[0].id, room.actors[1].id);
@@ -162,15 +202,33 @@ mod tests {
     }
 
     #[test]
-    fn test_actor_moves() {
+    fn test_actor_walk() {
         let mut game = GameInstance::new();
         let room = &mut game.current_room;
-        room.create_player(vec2(1, 0));
+        room.create_player(vec2(1, 1));
         let walk_1 = room.actor_walk(room.player_index, vec2(0, -1));
         assert!(!walk_1);
-        assert_eq!(room.actors[room.player_index].position, vec2(1, 0));
+        assert_eq!(room.actors[room.player_index].position, vec2(1, 1));
         let walk_2 = room.actor_walk(room.player_index, vec2(0, 1));
         assert!(walk_2);
-        assert_eq!(room.actors[room.player_index].position, vec2(1, 1));
+        assert_eq!(room.actors[room.player_index].position, vec2(1, 2));
+    }
+
+    #[test]
+    fn test_toad_monster_moves_in_circles() {
+        let mut game = GameInstance::new();
+        let monster_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(4, 4));
+            room.create_actor(ActorType::Toad, vec2(1, 1))
+        };
+        game.execute_command(Command::Wait);
+        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(2, 1));
+        game.execute_command(Command::Wait);
+        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(2, 2));
+        game.execute_command(Command::Wait);
+        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(1, 2));
+        game.execute_command(Command::Wait);
+        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(1, 1));
     }
 }
