@@ -1,5 +1,8 @@
 mod game_model;
+mod strings;
 mod types;
+
+use std::collections::HashMap;
 
 use color_eyre::Result;
 use cgmath::vec2;
@@ -36,8 +39,24 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_actor(ActorType::Toad, vec2(4, 4));
 }
 
+fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, ActorType>) -> Vec<Line<'c>> {
+    let player_name = "rodney";
+    events.iter().map(|event| {
+        let color = match event {
+            GameEvent::Bonk { .. } => Color::DarkGray,
+            GameEvent::MeleeAttack { .. } => Color::Red,
+        };
+        let parts = vec![
+            Span::styled("=> ", Style::default().fg(color)),
+            Span::from(strings::get_string(event.clone(), player_name, type_table)),
+        ];
+        Line::from(parts)
+    }).collect()
+}
+
 pub struct TerminalApp {
     game: GameInstance,
+    unread_event_index: usize,
     exit: bool,
 }
 
@@ -47,6 +66,7 @@ impl TerminalApp {
         init_test_level(&mut game);
         TerminalApp {
             game,
+            unread_event_index: 0,
             exit: false,
         }
     }
@@ -63,36 +83,50 @@ impl TerminalApp {
         frame.render_widget(self, frame.area());
     }
 
+    fn walk_or_fight(&mut self, delta: TileDelta) {
+        let next_position = self.game.current_room.get_player().position + delta;
+        let other_actors = self.game.current_room.find_actors_at(next_position);
+        if other_actors.len() > 0 {
+            self.game.execute_command(Command::Fight { delta });
+        } else {
+            self.game.execute_command(Command::Walk { delta });
+        }
+    }
+
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit = true,
-            KeyCode::Left => self.game.execute_command(Command::Walk { delta: vec2(-1, 0) }),
-            KeyCode::Right => self.game.execute_command(Command::Walk { delta: vec2(1, 0) }),
-            KeyCode::Up => self.game.execute_command(Command::Walk { delta: vec2(0, -1) }),
-            KeyCode::Down => self.game.execute_command(Command::Walk { delta: vec2(0, 1) }),
+            KeyCode::Left | KeyCode::Char('h') => self.walk_or_fight(vec2(-1, 0)),
+            KeyCode::Right | KeyCode::Char('l') => self.walk_or_fight(vec2(1, 0)),
+            KeyCode::Up | KeyCode::Char('k') => self.walk_or_fight(vec2(0, -1)),
+            KeyCode::Down | KeyCode::Char('j') => self.walk_or_fight(vec2(0, 1)),
             KeyCode::Char('.') => self.game.execute_command(Command::Wait),
             _ => {}
         }
     }
 
     fn handle_events(&mut self) -> Result<()> {
+        let turn = self.game.turn;
+        let event_log_len = self.game.event_log.len();
         match event::read()? {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 self.handle_key_event(key_event)
             }
             _ => {}
         };
+        if self.game.turn > turn {
+            self.unread_event_index = event_log_len;
+        }
         Ok(())
     }
 }
 
 impl Widget for &TerminalApp {
     fn render(self, _area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Lark ".bold());
-        let block = Block::bordered()
+        let map_block = Block::bordered()
             .padding(Padding::uniform(1))
             .border_type(ratatui::widgets::BorderType::Thick)
-            .title(title.centered());
+            .title(Line::from(" Lark ".bold()).centered());
 
         let mut lines_vec = vec![];
         for y in 0..(self.game.current_room.size.y as i32) {
@@ -113,11 +147,26 @@ impl Widget for &TerminalApp {
             }
             lines_vec.push(Line::from(char_vec));
         }
-        let text = Text::from(lines_vec);
-        Paragraph::new(text)
+        let map_text = Text::from(lines_vec);
+        Paragraph::new(map_text)
             .centered()
-            .block(block)
-            .render(Rect::new(0, 0, 23, 13), buf);
+            .block(map_block)
+            .render(Rect::new(0, 0, 46, 13), buf);
+
+        let unread_events = &self.game.event_log[self.unread_event_index..];
+        if unread_events.len() > 0 {
+            let event_block = Block::bordered()
+                .padding(Padding::horizontal(1))
+                .border_type(ratatui::widgets::BorderType::Thick);
+            let type_table = self.game.build_type_table();
+            let lines = create_lines_for_events(&unread_events, &type_table);
+            // TODO: Handle the case where we have more than 8 unread lines. Right now this will just truncate them.
+            let height = (2 + lines.len().min(8)) as u16;
+            Paragraph::new(Text::from(lines))
+                .left_aligned()
+                .block(event_block)
+                .render(Rect::new(0, 13, 46, height), buf);
+        }
     }
 }
 

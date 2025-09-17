@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use cgmath::vec2;
 
 use crate::types::*;
@@ -25,12 +27,17 @@ impl Default for Cell {
     }
 }
 
+fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
+    return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
+}
+
 #[derive(Debug)]
 pub struct Actor {
     id: u32,
     pub actor_type: ActorType,
-    position: TilePoint,
+    pub position: TilePoint,
     ai_data: i32,
+    current_hp: i32,
 }
 
 #[derive(Debug)]
@@ -64,6 +71,7 @@ impl Room {
             actor_type,
             position,
             ai_data: 0,
+            current_hp: 10,
         });
         self.next_actor_id += 1;
         id
@@ -84,8 +92,12 @@ impl Room {
         result
     }
 
-    pub fn get_actor(&self, actor_id: u32) -> Option<&Actor> {
-        self.actors.iter().find(|a| a.id == actor_id)
+    pub fn get_player(&self) -> &Actor {
+        &self.actors[self.player_index]
+    }
+
+    pub fn get_actor(&self, actor_id: u32) -> &Actor {
+        self.actors.iter().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
     }
 
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
@@ -95,24 +107,40 @@ impl Room {
         self.cells[position.x as usize][position.y as usize].cell_type
     }
 
-    fn run_monster_turn(&mut self, index: usize) {
+    fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> GameEvent {
+        self.actors[defender_index].current_hp -= 1;
+        GameEvent::MeleeAttack {
+            attacker_id: self.actors[attacker_index].id,
+            defender_id: self.actors[defender_index].id,
+            damage: 1,
+        }
+    }
+
+    fn run_monster_turn(&mut self, index: usize) -> Vec<GameEvent> {
+        let mut new_events = vec![];
         match self.actors[index].actor_type {
             ActorType::Player => (),
             ActorType::Toad => {
-                let walk_deta = match self.actors[index].ai_data {
-                    0 => vec2(1, 0),
-                    1 => vec2(0, 1),
-                    2 => vec2(-1, 0),
-                    3 => vec2(0, -1),
-                    _ => unreachable!(),
-                };
-                self.actor_walk(index, walk_deta);
-                self.actors[index].ai_data += 1;
-                if self.actors[index].ai_data > 3 {
-                    self.actors[index].ai_data = 0;
+                let distance_to_player = distance(self.get_player().position, self.actors[index].position);
+                if  distance_to_player == 1 {
+                    new_events.push(self.melee_attack(index, self.player_index));
+                } else {
+                    let walk_delta = match self.actors[index].ai_data {
+                        0 => vec2(1, 0),
+                        1 => vec2(0, 1),
+                        2 => vec2(-1, 0),
+                        3 => vec2(0, -1),
+                        _ => unreachable!(),
+                    };
+                    self.actor_walk(index, walk_delta);
+                    self.actors[index].ai_data += 1;
+                    if self.actors[index].ai_data > 3 {
+                        self.actors[index].ai_data = 0;
+                    }
                 }
             },
         }
+        new_events
     }
 
     fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) {
@@ -152,35 +180,72 @@ fn create_blank_room(size: TileSize) -> Room {
 pub enum Command {
     Wait,
     Walk { delta: TileDelta },
+    Fight { delta: TileDelta },
 }
 
 pub struct GameInstance {
+    pub turn: u32,
     pub current_room: Room,
+    pub event_log: Vec<GameEvent>,
 }
 
 impl GameInstance {
     pub fn new() -> Self {
         GameInstance {
+            turn: 0,
             current_room: create_blank_room(vec2(13, 9)),
+            event_log: vec![],
         }
     }
 
     pub fn execute_command(&mut self, command: Command) {
         let turn_ended = match command {
             Command::Wait => true,
-            Command::Walk { delta } => self.current_room.actor_walk(self.current_room.player_index, delta),
+            Command::Walk { delta } => {
+                let succeeded = self.current_room.actor_walk(self.current_room.player_index, delta);
+                if !succeeded {
+                    self.event_log.push(GameEvent::Bonk { actor_id: self.current_room.get_player().id });
+                }
+                succeeded
+            }
+            Command::Fight { delta } => {
+                let attack_position = self.current_room.get_player().position + delta;
+                let other_actors = self.current_room.find_actors_at(attack_position);
+                if other_actors.len() > 0 {
+                    let defender_index = other_actors[0];
+                    self.event_log.push(self.current_room.melee_attack(self.current_room.player_index, defender_index));
+                }
+                true
+            },
         };
         if turn_ended {
             for i in 0..self.current_room.actors.len() {
-                self.current_room.run_monster_turn(i);
+                self.event_log.append(&mut self.current_room.run_monster_turn(i));
             }
+            self.turn += 1;
         }
+    }
+
+    pub fn build_type_table(&self) -> HashMap<u32, ActorType> {
+        let mut result = HashMap::new();
+        for actor in self.current_room.actors.iter() {
+            result.insert(actor.id, actor.actor_type);
+        }
+        result
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_distance() {
+        assert_eq!(0, distance(vec2(0, 0), vec2(0, 0)));
+        assert_eq!(1, distance(vec2(1, 0), vec2(0, 0)));
+        assert_eq!(4, distance(vec2(1, 0), vec2(4, 1)));
+        assert_eq!(4, distance(vec2(1, 1), vec2(-1, -1)));
+    }
 
     #[test]
     fn test_create_room() {
@@ -204,14 +269,20 @@ mod tests {
     #[test]
     fn test_actor_walk() {
         let mut game = GameInstance::new();
-        let room = &mut game.current_room;
-        room.create_player(vec2(1, 1));
-        let walk_1 = room.actor_walk(room.player_index, vec2(0, -1));
-        assert!(!walk_1);
-        assert_eq!(room.actors[room.player_index].position, vec2(1, 1));
-        let walk_2 = room.actor_walk(room.player_index, vec2(0, 1));
-        assert!(walk_2);
-        assert_eq!(room.actors[room.player_index].position, vec2(1, 2));
+        assert_eq!(0, game.turn);
+        game.current_room.create_player(vec2(1, 1));
+
+        game.execute_command(Command::Walk { delta: vec2(0, -1) });
+        assert_eq!(game.current_room.get_player().position, vec2(1, 1));
+        assert_eq!(vec![
+            GameEvent::Bonk { actor_id: game.current_room.get_player().id },
+        ], game.event_log);
+        assert_eq!(0, game.turn);
+
+        game.execute_command(Command::Walk { delta: vec2(0, 1) });
+        assert_eq!(game.current_room.get_player().position, vec2(1, 2));
+        assert_eq!(1, game.event_log.len()); // No new event
+        assert_eq!(1, game.turn);
     }
 
     #[test]
@@ -223,12 +294,33 @@ mod tests {
             room.create_actor(ActorType::Toad, vec2(1, 1))
         };
         game.execute_command(Command::Wait);
-        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(2, 1));
+        assert_eq!(game.current_room.get_actor(monster_id).position, vec2(2, 1));
         game.execute_command(Command::Wait);
-        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(2, 2));
+        assert_eq!(game.current_room.get_actor(monster_id).position, vec2(2, 2));
         game.execute_command(Command::Wait);
-        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(1, 2));
+        assert_eq!(game.current_room.get_actor(monster_id).position, vec2(1, 2));
         game.execute_command(Command::Wait);
-        assert_eq!(game.current_room.get_actor(monster_id).unwrap().position, vec2(1, 1));
+        assert_eq!(game.current_room.get_actor(monster_id).position, vec2(1, 1));
+    }
+
+    #[test]
+    fn test_toad_monster_fights_player() {
+        let mut game = GameInstance::new();
+        let (monster_id, player_id, player_max_hp, monster_max_hp) = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let monster_id = room.create_actor(ActorType::Toad, vec2(2, 1));
+            let player_id = room.get_player().id;
+            let player_max_hp = room.get_player().current_hp;
+            let monster_max_hp = room.get_actor(monster_id).current_hp;
+            (monster_id, player_id, player_max_hp, monster_max_hp)
+        };
+        game.execute_command(Command::Fight { delta: vec2(1, 0) });
+        assert!(game.current_room.get_player().current_hp < player_max_hp);
+        assert!(game.current_room.get_actor(monster_id).current_hp < monster_max_hp);
+        assert_eq!(vec![
+            GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 1 },
+            GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 1 },
+        ], game.event_log);
     }
 }
