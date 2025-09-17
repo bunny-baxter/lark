@@ -14,4 +14,5 @@ pub enum ActorType {
 pub enum GameEvent {
     Bonk { actor_id: u32 },
     MeleeAttack { attacker_id: u32, defender_id: u32, damage: i32 },
+    Death { actor_id: u32 },
 }

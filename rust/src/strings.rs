@@ -19,9 +19,10 @@ fn get_actor_name<'a, 'b>(actor_id: u32, player_name: &'a str, type_table: &'b H
 
 pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32, ActorType>) -> String {
     match event {
-        GameEvent::Bonk { actor_id } => format!("{} bonks the wall", get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::Bonk { actor_id } => format!("{} bonks into the wall", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::MeleeAttack { attacker_id, defender_id, damage } => {
             format!("{} \u{2020}{} {}", get_actor_name(attacker_id, player_name, type_table), damage, get_actor_name(defender_id, player_name, type_table))
         },
+        GameEvent::Death { actor_id } => format!("{} dies", get_actor_name(actor_id, player_name, type_table)),
     }
 }

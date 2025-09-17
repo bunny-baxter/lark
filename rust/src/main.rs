@@ -1,3 +1,4 @@
+mod content;
 mod game_model;
 mod strings;
 mod types;
@@ -45,6 +46,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
         let color = match event {
             GameEvent::Bonk { .. } => Color::DarkGray,
             GameEvent::MeleeAttack { .. } => Color::Red,
+            GameEvent::Death { .. } => Color::DarkGray,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -85,7 +87,7 @@ impl TerminalApp {
 
     fn walk_or_fight(&mut self, delta: TileDelta) {
         let next_position = self.game.current_room.get_player().position + delta;
-        let other_actors = self.game.current_room.find_actors_at(next_position);
+        let other_actors = self.game.current_room.find_actors_at(next_position, false);
         if other_actors.len() > 0 {
             self.game.execute_command(Command::Fight { delta });
         } else {
@@ -132,13 +134,22 @@ impl Widget for &TerminalApp {
         for y in 0..(self.game.current_room.size.y as i32) {
             let mut char_vec = vec![];
             for x in 0..(self.game.current_room.size.x as i32) {
-                let actors = self.game.current_room.find_actors_at(vec2(x, y));
+                let actors = self.game.current_room.find_actors_at(vec2(x, y), true);
                 if actors.len() > 0 {
+                    // TODO: Should sort `actors` by which should be on top.
                     let actor_index = actors[0];
-                    let c = match self.game.current_room.actors[actor_index].actor_type {
+                    let actor = &self.game.current_room.actors[actor_index];
+                    let mut c = match actor.actor_type {
                         ActorType::Player => "@".light_yellow().on_black(),
                         ActorType::Toad => "t".light_green().on_black(),
                     };
+                    if actor.is_dead {
+                        c = c.dark_gray();
+                    } else if actor.current_hp <= (actor.max_hp as f32 / 4.0).round() as i32 {
+                        c = c.red();
+                    } else if actor.current_hp <= (actor.max_hp as f32 / 2.0).round() as i32 {
+                        c = c.light_red();
+                    }
                     char_vec.push(c);
                 } else {
                     let display = display_for_cell_type(self.game.current_room.get_cell_type(vec2(x, y)));

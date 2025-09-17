@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use cgmath::vec2;
 
+use crate::content;
 use crate::types::*;
 
 #[repr(C)]
@@ -37,7 +38,9 @@ pub struct Actor {
     pub actor_type: ActorType,
     pub position: TilePoint,
     ai_data: i32,
-    current_hp: i32,
+    pub is_dead: bool,
+    pub max_hp: i32,
+    pub current_hp: i32,
 }
 
 #[derive(Debug)]
@@ -66,12 +69,15 @@ impl Room {
 
     pub fn create_actor(&mut self, actor_type: ActorType, position: TilePoint) -> u32 {
         let id = self.next_actor_id;
+        let stats = content::get_base_stats(actor_type);
         self.actors.push(Actor {
             id,
             actor_type,
             position,
             ai_data: 0,
-            current_hp: 10,
+            is_dead: false,
+            max_hp: stats.max_hp,
+            current_hp: stats.max_hp,
         });
         self.next_actor_id += 1;
         id
@@ -82,10 +88,10 @@ impl Room {
         self.player_index = self.actors.len() - 1;
     }
 
-    pub fn find_actors_at(&self, position: TilePoint) -> Vec<usize> {
+    pub fn find_actors_at(&self, position: TilePoint, include_dead: bool) -> Vec<usize> {
         let mut result = vec![];
         for i in 0..self.actors.len() {
-            if self.actors[i].position == position {
+            if self.actors[i].position == position && (include_dead || !self.actors[i].is_dead) {
                 result.push(i);
             }
         }
@@ -100,6 +106,10 @@ impl Room {
         self.actors.iter().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
     }
 
+    pub fn get_actor_mut(&mut self, actor_id: u32) -> &mut Actor {
+        self.actors.iter_mut().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
+    }
+
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
         if position.x < 0 || position.y < 0 || position.x as usize >= self.size.x || position.y as usize >= self.size.y {
             return CellType::OutOfBounds;
@@ -107,23 +117,42 @@ impl Room {
         self.cells[position.x as usize][position.y as usize].cell_type
     }
 
-    fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> GameEvent {
-        self.actors[defender_index].current_hp -= 1;
-        GameEvent::MeleeAttack {
-            attacker_id: self.actors[attacker_index].id,
-            defender_id: self.actors[defender_index].id,
-            damage: 1,
+    fn modify_hp(&mut self, actor_index: usize, delta: i32) {
+        let actor = &mut self.actors[actor_index];
+        actor.current_hp += delta;
+        if actor.current_hp > actor.max_hp {
+            actor.current_hp = actor.max_hp;
+        } else if actor.current_hp <= 0 {
+            actor.is_dead = true;
         }
     }
 
+    fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> Vec<GameEvent> {
+        self.modify_hp(defender_index, -1);
+        let mut new_events = vec![
+            GameEvent::MeleeAttack {
+                attacker_id: self.actors[attacker_index].id,
+                defender_id: self.actors[defender_index].id,
+                damage: 1,
+            }
+        ];
+        if self.actors[defender_index].is_dead {
+            new_events.push(GameEvent::Death { actor_id: self.actors[defender_index].id });
+        }
+        new_events
+    }
+
     fn run_monster_turn(&mut self, index: usize) -> Vec<GameEvent> {
+        if self.actors[index].is_dead {
+            return vec![];
+        }
         let mut new_events = vec![];
         match self.actors[index].actor_type {
             ActorType::Player => (),
             ActorType::Toad => {
                 let distance_to_player = distance(self.get_player().position, self.actors[index].position);
                 if  distance_to_player == 1 {
-                    new_events.push(self.melee_attack(index, self.player_index));
+                    new_events.append(&mut self.melee_attack(index, self.player_index));
                 } else {
                     let walk_delta = match self.actors[index].ai_data {
                         0 => vec2(1, 0),
@@ -154,7 +183,7 @@ impl Room {
             CellType::DefaultWall | CellType::OutOfBounds => return false,
             _ => {},
         };
-        if self.find_actors_at(next_position).len() > 0 {
+        if self.find_actors_at(next_position, false).len() > 0 {
             return false;
         }
         self.teleport_actor(actor_index, next_position);
@@ -210,10 +239,10 @@ impl GameInstance {
             }
             Command::Fight { delta } => {
                 let attack_position = self.current_room.get_player().position + delta;
-                let other_actors = self.current_room.find_actors_at(attack_position);
+                let other_actors = self.current_room.find_actors_at(attack_position, false);
                 if other_actors.len() > 0 {
                     let defender_index = other_actors[0];
-                    self.event_log.push(self.current_room.melee_attack(self.current_room.player_index, defender_index));
+                    self.event_log.append(&mut self.current_room.melee_attack(self.current_room.player_index, defender_index));
                 }
                 true
             },
@@ -322,5 +351,22 @@ mod tests {
             GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 1 },
             GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 1 },
         ], game.event_log);
+    }
+
+    #[test]
+    fn test_toad_dies() {
+        let mut game = GameInstance::new();
+        let monster_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let monster_id = room.create_actor(ActorType::Toad, vec2(2, 1));
+            room.get_actor_mut(monster_id).current_hp = 1;
+            monster_id
+        };
+        game.execute_command(Command::Fight { delta: vec2(1, 0) });
+        assert!(game.current_room.get_actor(monster_id).is_dead);
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        assert_eq!(game.current_room.get_player().position, vec2(2, 1)); // Player can occupy that space now
+        assert_eq!(game.current_room.get_actor(monster_id).position, vec2(2, 1)); // Dead monster shouldn't move
     }
 }
