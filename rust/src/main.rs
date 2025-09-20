@@ -19,6 +19,7 @@ use ratatui::{
 };
 
 use game_model::{CellType, Command, GameInstance};
+use strings::NamedType;
 use types::*;
 
 struct CellDisplay {
@@ -38,15 +39,21 @@ fn display_for_cell_type(cell_type: CellType) -> CellDisplay {
 fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_player(vec2(2, 1));
     game.current_room.create_actor(ActorType::Toad, vec2(4, 4));
+    game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
+    game.current_room.create_item(ItemType::BlackstoneSpear, vec2(5, 1));
+    game.current_room.create_item(ItemType::CarmineChainmail, vec2(5, 2));
+    game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
 }
 
-fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, ActorType>) -> Vec<Line<'c>> {
+fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, NamedType>) -> Vec<Line<'c>> {
     let player_name = "rodney";
     events.iter().map(|event| {
         let color = match event {
             GameEvent::Bonk { .. } => Color::DarkGray,
             GameEvent::MeleeAttack { .. } => Color::Red,
             GameEvent::Death { .. } => Color::DarkGray,
+            GameEvent::GotItem { .. } => Color::LightYellow,
+            GameEvent::DroppedItem { .. } => Color::LightYellow,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -85,6 +92,53 @@ impl TerminalApp {
         frame.render_widget(self, frame.area());
     }
 
+    fn get_char_for_cell(&self, position: TilePoint) -> Span<'_> {
+        let actors = self.game.current_room.find_actors_at(position, true);
+        if actors.len() > 0 {
+            // TODO: Should sort `actors` by which should be on top.
+            let actor_index = actors[0];
+            let actor = &self.game.current_room.actors[actor_index];
+            let mut c = match actor.actor_type {
+                ActorType::Player => "@".light_yellow().on_black(),
+                ActorType::Toad => "t".light_green().on_black(),
+            };
+            if actor.is_dead {
+                c = c.dark_gray();
+            } else if actor.current_hp <= (actor.max_hp as f32 / 4.0).round() as i32 {
+                c = c.red();
+            } else if actor.current_hp <= (actor.max_hp as f32 / 2.0).round() as i32 {
+                c = c.light_red();
+            }
+            return c;
+        }
+
+        let items = self.game.current_room.find_loose_items_at(position);
+        if items.len() > 0 {
+            let item_index = items[0];
+            let item = &self.game.current_room.items[item_index];
+            return match item.item_type {
+                ItemType::LumpOfBlackstone => "*".gray().on_black(),
+                ItemType::BlackstoneSpear => "|".gray().on_black(),
+                ItemType::CarmineChainmail => "[".red().on_black(),
+                ItemType::Bloodflower => "%".light_red().on_black(),
+            };
+        }
+
+        let display = display_for_cell_type(self.game.current_room.get_cell_type(position));
+        Span::styled(display.c.to_string(), Style::default().fg(display.fg_color).bg(display.bg_color))
+    }
+
+    fn build_type_table(&self) -> HashMap<u32, NamedType> {
+        let mut result = HashMap::new();
+        for actor in self.game.current_room.actors.iter() {
+            result.insert(actor.id, NamedType::ActorType { actor_type: actor.actor_type });
+        }
+        for item in self.game.current_room.items.iter() {
+            result.insert(item.id, NamedType::ItemType { item_type: item.item_type });
+        }
+        result
+    }
+
     fn walk_or_fight(&mut self, delta: TileDelta) {
         let next_position = self.game.current_room.get_player().position + delta;
         let other_actors = self.game.current_room.find_actors_at(next_position, false);
@@ -92,6 +146,15 @@ impl TerminalApp {
             self.game.execute_command(Command::Fight { delta });
         } else {
             self.game.execute_command(Command::Walk { delta });
+        }
+    }
+
+    fn get_first_item(&mut self) {
+        let position = self.game.current_room.get_player().position;
+        let items = self.game.current_room.find_loose_items_at(position);
+        if items.len() > 0 {
+            let item_id = self.game.current_room.items[items[0]].id;
+            self.game.execute_command(Command::GetItem { item_id });
         }
     }
 
@@ -103,6 +166,7 @@ impl TerminalApp {
             KeyCode::Up | KeyCode::Char('k') => self.walk_or_fight(vec2(0, -1)),
             KeyCode::Down | KeyCode::Char('j') => self.walk_or_fight(vec2(0, 1)),
             KeyCode::Char('.') => self.game.execute_command(Command::Wait),
+            KeyCode::Char('g') | KeyCode::Char(',') => self.get_first_item(),
             _ => {}
         }
     }
@@ -134,27 +198,7 @@ impl Widget for &TerminalApp {
         for y in 0..(self.game.current_room.size.y as i32) {
             let mut char_vec = vec![];
             for x in 0..(self.game.current_room.size.x as i32) {
-                let actors = self.game.current_room.find_actors_at(vec2(x, y), true);
-                if actors.len() > 0 {
-                    // TODO: Should sort `actors` by which should be on top.
-                    let actor_index = actors[0];
-                    let actor = &self.game.current_room.actors[actor_index];
-                    let mut c = match actor.actor_type {
-                        ActorType::Player => "@".light_yellow().on_black(),
-                        ActorType::Toad => "t".light_green().on_black(),
-                    };
-                    if actor.is_dead {
-                        c = c.dark_gray();
-                    } else if actor.current_hp <= (actor.max_hp as f32 / 4.0).round() as i32 {
-                        c = c.red();
-                    } else if actor.current_hp <= (actor.max_hp as f32 / 2.0).round() as i32 {
-                        c = c.light_red();
-                    }
-                    char_vec.push(c);
-                } else {
-                    let display = display_for_cell_type(self.game.current_room.get_cell_type(vec2(x, y)));
-                    char_vec.push(Span::styled(display.c.to_string(), Style::default().fg(display.fg_color).bg(display.bg_color)));
-                }
+                char_vec.push(self.get_char_for_cell(vec2(x, y)));
             }
             lines_vec.push(Line::from(char_vec));
         }
@@ -169,7 +213,7 @@ impl Widget for &TerminalApp {
             let event_block = Block::bordered()
                 .padding(Padding::horizontal(1))
                 .border_type(ratatui::widgets::BorderType::Thick);
-            let type_table = self.game.build_type_table();
+            let type_table = self.build_type_table();
             let lines = create_lines_for_events(&unread_events, &type_table);
             // TODO: Handle the case where we have more than 8 unread lines. Right now this will just truncate them.
             let height = (2 + lines.len().min(8)) as u16;

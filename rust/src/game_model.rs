@@ -34,7 +34,7 @@ fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
 
 #[derive(Debug)]
 pub struct Actor {
-    id: u32,
+    pub id: u32,
     pub actor_type: ActorType,
     pub position: TilePoint,
     ai_data: i32,
@@ -44,11 +44,21 @@ pub struct Actor {
 }
 
 #[derive(Debug)]
+pub struct Item {
+    pub id: u32,
+    pub item_type: ItemType,
+    pub position: TilePoint,
+    carried: bool,
+}
+
+#[derive(Debug)]
 pub struct Room {
     pub size: TileSize,
     pub cells: Vec<Vec<Cell>>,
     pub actors: Vec<Actor>,
-    pub next_actor_id: u32,
+    pub items: Vec<Item>,
+    pub player_inventory: Vec<u32>,
+    pub next_id: u32,
     pub player_index: usize,
 }
 
@@ -62,13 +72,15 @@ impl Room {
             size,
             cells,
             actors: vec![],
-            next_actor_id: 0,
+            items: vec![],
+            player_inventory: vec![],
+            next_id: 0,
             player_index: 0,
         }
     }
 
     pub fn create_actor(&mut self, actor_type: ActorType, position: TilePoint) -> u32 {
-        let id = self.next_actor_id;
+        let id = self.next_id;
         let stats = content::get_base_stats(actor_type);
         self.actors.push(Actor {
             id,
@@ -79,7 +91,7 @@ impl Room {
             max_hp: stats.max_hp,
             current_hp: stats.max_hp,
         });
-        self.next_actor_id += 1;
+        self.next_id += 1;
         id
     }
 
@@ -88,10 +100,32 @@ impl Room {
         self.player_index = self.actors.len() - 1;
     }
 
+    pub fn create_item(&mut self, item_type: ItemType, position: TilePoint) -> u32 {
+        let id = self.next_id;
+        self.items.push(Item {
+            id,
+            item_type,
+            position,
+            carried: false,
+        });
+        self.next_id += 1;
+        id
+    }
+
     pub fn find_actors_at(&self, position: TilePoint, include_dead: bool) -> Vec<usize> {
         let mut result = vec![];
         for i in 0..self.actors.len() {
             if self.actors[i].position == position && (include_dead || !self.actors[i].is_dead) {
+                result.push(i);
+            }
+        }
+        result
+    }
+
+    pub fn find_loose_items_at(&self, position: TilePoint) -> Vec<usize> {
+        let mut result = vec![];
+        for i in 0..self.items.len() {
+            if self.items[i].position == position && !self.items[i].carried {
                 result.push(i);
             }
         }
@@ -108,6 +142,14 @@ impl Room {
 
     pub fn get_actor_mut(&mut self, actor_id: u32) -> &mut Actor {
         self.actors.iter_mut().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
+    }
+
+    pub fn get_item(&self, item_id: u32) -> &Item {
+        self.items.iter().find(|i| i.id == item_id).expect("get_item failed to find item")
+    }
+
+    pub fn get_item_mut(&mut self, item_id: u32) -> &mut Item {
+        self.items.iter_mut().find(|i| i.id == item_id).expect("get_item failed to find item")
     }
 
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
@@ -174,6 +216,13 @@ impl Room {
 
     fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) {
         self.actors[actor_index].position = new_position;
+        if actor_index == self.player_index {
+            for item in self.items.iter_mut() {
+                if self.player_inventory.contains(&item.id) {
+                    item.position = new_position;
+                }
+            }
+        }
     }
 
     fn actor_walk(&mut self, actor_index: usize, delta: TileDelta) -> bool {
@@ -210,6 +259,8 @@ pub enum Command {
     Wait,
     Walk { delta: TileDelta },
     Fight { delta: TileDelta },
+    GetItem { item_id: u32 },
+    DropItem { item_id: u32 },
 }
 
 pub struct GameInstance {
@@ -246,6 +297,18 @@ impl GameInstance {
                 }
                 true
             },
+            Command::GetItem { item_id } => {
+                self.current_room.get_item_mut(item_id).carried = true;
+                self.current_room.player_inventory.push(item_id);
+                self.event_log.push(GameEvent::GotItem { item_id });
+                true
+            },
+            Command::DropItem { item_id } => {
+                self.current_room.get_item_mut(item_id).carried = false;
+                self.current_room.player_inventory.swap_remove(self.current_room.player_inventory.iter().position(|&id| id == item_id).unwrap());
+                self.event_log.push(GameEvent::DroppedItem { item_id });
+                true
+            },
         };
         if turn_ended {
             for i in 0..self.current_room.actors.len() {
@@ -253,14 +316,6 @@ impl GameInstance {
             }
             self.turn += 1;
         }
-    }
-
-    pub fn build_type_table(&self) -> HashMap<u32, ActorType> {
-        let mut result = HashMap::new();
-        for actor in self.current_room.actors.iter() {
-            result.insert(actor.id, actor.actor_type);
-        }
-        result
     }
 }
 
@@ -368,5 +423,53 @@ mod tests {
         game.execute_command(Command::Walk { delta: vec2(1, 0) });
         assert_eq!(game.current_room.get_player().position, vec2(2, 1)); // Player can occupy that space now
         assert_eq!(game.current_room.get_actor(monster_id).position, vec2(2, 1)); // Dead monster shouldn't move
+    }
+
+    #[test]
+    fn test_pick_up_and_drop_item() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id = room.create_item(ItemType::LumpOfBlackstone, vec2(1, 1));
+            item_id
+        };
+        assert!(!game.current_room.get_item(item_id).carried);
+        assert_eq!(0, game.current_room.player_inventory.len());
+        assert_eq!(vec![0], game.current_room.find_loose_items_at(vec2(1, 1)));
+
+        game.execute_command(Command::GetItem { item_id });
+        assert!(game.current_room.get_item(item_id).carried);
+        assert_eq!(vec![item_id], game.current_room.player_inventory);
+        assert_eq!(0, game.current_room.find_loose_items_at(vec2(1, 1)).len());
+
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        // Item moves with player
+        assert_eq!(vec2(2, 1), game.current_room.get_item(item_id).position);
+
+        game.execute_command(Command::DropItem { item_id });
+        assert!(!game.current_room.get_item(item_id).carried);
+        assert_eq!(0, game.current_room.player_inventory.len());
+
+        game.execute_command(Command::Walk { delta: vec2(-1, 0) });
+        // Item remains where dropped
+        assert_eq!(vec2(2, 1), game.current_room.get_item(item_id).position);
+    }
+
+    #[test]
+    fn test_pick_up_and_drop_events() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id = room.create_item(ItemType::LumpOfBlackstone, vec2(1, 1));
+            item_id
+        };
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::DropItem { item_id });
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::DroppedItem { item_id },
+        ], game.event_log);
     }
 }
