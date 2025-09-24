@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use cgmath::vec2;
 
 use crate::content;

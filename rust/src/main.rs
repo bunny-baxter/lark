@@ -179,11 +179,23 @@ impl TerminalApp {
         }
     }
 
+    fn get_selected_item_id(&self) -> Option<u32> {
+        let item_menu = self.item_menu.as_ref().unwrap();
+        if item_menu.is_empty() {
+            return None;
+        }
+        Some(item_menu.item_ids[item_menu.cursor_index])
+    }
+
     fn handle_key_item_menu(&mut self, key_code: KeyCode) {
         match key_code {
             KeyCode::Char('q') => self.exit = true,
             KeyCode::Up | KeyCode::Char('k') => self.item_menu.as_mut().unwrap().move_cursor(-1),
             KeyCode::Down | KeyCode::Char('j') => self.item_menu.as_mut().unwrap().move_cursor(1),
+            KeyCode::Char('d') => if let Some(item_id) = self.get_selected_item_id() {
+                self.game.execute_command(Command::DropItem { item_id });
+                self.item_menu = None;
+            },
             KeyCode::Esc => self.item_menu = None,
             _ => {}
         }
