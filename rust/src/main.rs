@@ -2,6 +2,7 @@ mod content;
 mod game_model;
 mod strings;
 mod types;
+mod ui_common;
 
 use std::collections::HashMap;
 
@@ -21,6 +22,7 @@ use ratatui::{
 use game_model::{CellType, Command, GameInstance};
 use strings::NamedType;
 use types::*;
+use ui_common::ItemMenu;
 
 struct CellDisplay {
     c: char,
@@ -66,6 +68,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
 pub struct TerminalApp {
     game: GameInstance,
     unread_event_index: usize,
+    item_menu: Option<ItemMenu>,
     exit: bool,
 }
 
@@ -76,6 +79,7 @@ impl TerminalApp {
         TerminalApp {
             game,
             unread_event_index: 0,
+            item_menu: None,
             exit: false,
         }
     }
@@ -158,8 +162,8 @@ impl TerminalApp {
         }
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
+    fn handle_key_main_screen(&mut self, key_code: KeyCode) {
+        match key_code {
             KeyCode::Char('q') => self.exit = true,
             KeyCode::Left | KeyCode::Char('h') => self.walk_or_fight(vec2(-1, 0)),
             KeyCode::Right | KeyCode::Char('l') => self.walk_or_fight(vec2(1, 0)),
@@ -167,7 +171,29 @@ impl TerminalApp {
             KeyCode::Down | KeyCode::Char('j') => self.walk_or_fight(vec2(0, 1)),
             KeyCode::Char('.') => self.game.execute_command(Command::Wait),
             KeyCode::Char('g') | KeyCode::Char(',') => self.get_first_item(),
+            KeyCode::Char('i') => {
+                let item_ids = self.game.current_room.player_inventory.clone();
+                self.item_menu = Some(ItemMenu::new(item_ids));
+            },
             _ => {}
+        }
+    }
+
+    fn handle_key_item_menu(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Char('q') => self.exit = true,
+            KeyCode::Up | KeyCode::Char('k') => self.item_menu.as_mut().unwrap().move_cursor(-1),
+            KeyCode::Down | KeyCode::Char('j') => self.item_menu.as_mut().unwrap().move_cursor(1),
+            KeyCode::Esc => self.item_menu = None,
+            _ => {}
+        }
+    }
+
+    fn handle_key_event(&mut self, key_event: KeyEvent) {
+        if self.item_menu.is_some() {
+            self.handle_key_item_menu(key_event.code);
+        } else {
+            self.handle_key_main_screen(key_event.code);
         }
     }
 
@@ -185,10 +211,8 @@ impl TerminalApp {
         }
         Ok(())
     }
-}
 
-impl Widget for &TerminalApp {
-    fn render(self, _area: Rect, buf: &mut Buffer) {
+    fn render_main_screen(&self, buf: &mut Buffer) {
         let map_block = Block::bordered()
             .padding(Padding::uniform(1))
             .border_type(ratatui::widgets::BorderType::Thick)
@@ -207,13 +231,52 @@ impl Widget for &TerminalApp {
             .centered()
             .block(map_block)
             .render(Rect::new(0, 0, 46, 13), buf);
+    }
+
+    fn render_item_menu(&self, buf: &mut Buffer, type_table: &HashMap<u32, NamedType>) {
+        let menu_block = Block::bordered()
+            .padding(Padding::uniform(1))
+            .border_type(ratatui::widgets::BorderType::Thick)
+            .title(Line::from(" Inventory ".bold()).centered());
+
+        let item_menu = self.item_menu.as_ref().unwrap();
+        let mut lines_vec = vec![];
+        if item_menu.is_empty() {
+            lines_vec.push(Line::from(strings::EMPTY_INVENTORY.white()));
+        } else {
+            for i in 0..item_menu.item_ids.len() {
+                let mut s = Span::from(strings::get_item_name(item_menu.item_ids[i], type_table));
+                if i == item_menu.cursor_index {
+                    s = s.black().on_white();
+                } else {
+                    s = s.white();
+                }
+                lines_vec.push(Line::from(s));
+            }
+        }
+
+        Paragraph::new(Text::from(lines_vec))
+            .left_aligned()
+            .block(menu_block)
+            .render(Rect::new(0, 0, 46, 13), buf);
+    }
+}
+
+impl Widget for &TerminalApp {
+    fn render(self, _area: Rect, buf: &mut Buffer) {
+        let type_table = self.build_type_table();
+
+        if self.item_menu.is_some() {
+            self.render_item_menu(buf, &type_table);
+        } else {
+            self.render_main_screen(buf);
+        }
 
         let unread_events = &self.game.event_log[self.unread_event_index..];
         if unread_events.len() > 0 {
             let event_block = Block::bordered()
                 .padding(Padding::horizontal(1))
                 .border_type(ratatui::widgets::BorderType::Thick);
-            let type_table = self.build_type_table();
             let lines = create_lines_for_events(&unread_events, &type_table);
             // TODO: Handle the case where we have more than 8 unread lines. Right now this will just truncate them.
             let height = (2 + lines.len().min(8)) as u16;

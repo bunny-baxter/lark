@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::types::{ActorType, ItemType, GameEvent};
 
+pub const EMPTY_INVENTORY: &str = "nothing is being carried";
+
 pub enum NamedType {
     ActorType { actor_type: ActorType },
     ItemType { item_type: ItemType },
