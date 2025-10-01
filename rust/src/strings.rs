@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::content::{EquipSlot, get_item_data};
 use crate::types::{ActorType, ItemType, GameEvent};
 
 pub const EMPTY_INVENTORY: &str = "nothing is being carried";
@@ -42,6 +43,50 @@ pub fn get_item_name(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'st
     }
 }
 
+pub fn get_equipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
+    let item_type = type_table.get(&item_id);
+    match item_type {
+        Some(NamedType::ItemType { item_type }) => {
+            let equip_slot = get_item_data(*item_type).equip_slot;
+            match equip_slot {
+                EquipSlot::Weapon => "wielded",
+                EquipSlot::Headgear => "donned",
+                EquipSlot::Torso => "put on",
+            }
+        },
+        _ => "((unknown))",
+    }
+}
+
+pub fn get_equipped_participle(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
+    let item_type = type_table.get(&item_id);
+    match item_type {
+        Some(NamedType::ItemType { item_type }) => {
+            let equip_slot = get_item_data(*item_type).equip_slot;
+            match equip_slot {
+                EquipSlot::Weapon => "wielded",
+                _ => "worn",
+            }
+        },
+        _ => "((unknown))",
+    }
+}
+
+pub fn get_unequipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
+    let item_type = type_table.get(&item_id);
+    match item_type {
+        Some(NamedType::ItemType { item_type }) => {
+            let equip_slot = get_item_data(*item_type).equip_slot;
+            match equip_slot {
+                EquipSlot::Weapon => "put away",
+                EquipSlot::Headgear => "doffed",
+                EquipSlot::Torso => "took off",
+            }
+        },
+        _ => "((unknown))",
+    }
+}
+
 pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32, NamedType>) -> String {
     match event {
         GameEvent::Bonk { actor_id } => format!("{} hits a wall", get_actor_name(actor_id, player_name, type_table)),
@@ -51,5 +96,7 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::Death { actor_id } => format!("{} dies", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::GotItem { item_id } => format!("got {}", get_item_name(item_id, type_table)),
         GameEvent::DroppedItem { item_id } => format!("dropped {}", get_item_name(item_id, type_table)),
+        GameEvent::EquippedItem { item_id } => format!("{} {}", get_equipped_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
+        GameEvent::UnequippedItem { item_id } => format!("{} {}", get_unequipped_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
     }
 }

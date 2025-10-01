@@ -56,6 +56,8 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::Death { .. } => Color::DarkGray,
             GameEvent::GotItem { .. } => Color::LightYellow,
             GameEvent::DroppedItem { .. } => Color::LightYellow,
+            GameEvent::EquippedItem { .. } => Color::LightYellow,
+            GameEvent::UnequippedItem { .. } => Color::LightYellow,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -196,6 +198,10 @@ impl TerminalApp {
                 self.game.execute_command(Command::DropItem { item_id });
                 self.item_menu = None;
             },
+            KeyCode::Char('w') => if let Some(item_id) = self.get_selected_item_id() {
+                self.game.execute_command(Command::ToggleEquipment { item_id });
+                self.item_menu = None;
+            },
             KeyCode::Esc => self.item_menu = None,
             _ => {}
         }
@@ -257,13 +263,19 @@ impl TerminalApp {
             lines_vec.push(Line::from(strings::EMPTY_INVENTORY.white()));
         } else {
             for i in 0..item_menu.item_ids.len() {
-                let mut s = Span::from(strings::get_item_name(item_menu.item_ids[i], type_table));
-                if i == item_menu.cursor_index {
-                    s = s.black().on_white();
+                let item_id = item_menu.item_ids[i];
+                let s = if self.game.current_room.get_item(item_id).equipped {
+                    format!("{} ({})", strings::get_item_name(item_id, type_table), strings::get_equipped_participle(item_id, type_table))
                 } else {
-                    s = s.white();
+                    strings::get_item_name(item_id, type_table).to_string()
+                };
+                let mut span = Span::from(s);
+                if i == item_menu.cursor_index {
+                    span = span.black().on_white();
+                } else {
+                    span = span.white();
                 }
-                lines_vec.push(Line::from(s));
+                lines_vec.push(Line::from(span));
             }
         }
 

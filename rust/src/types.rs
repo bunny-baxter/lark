@@ -20,6 +20,9 @@ pub enum ItemType {
     //ViridianSword,
     CarmineChainmail,
     //ViridianChainmail,
+    //CarmineHelm,
+    //ViridianHelm,
+    //FeatheredCavalier,
     Bloodflower,
     //Azureberry,
     //Indigoberry,
@@ -38,4 +41,6 @@ pub enum GameEvent {
     Death { actor_id: u32 },
     GotItem { item_id: u32 },
     DroppedItem { item_id: u32 },
+    EquippedItem { item_id: u32 },
+    UnequippedItem { item_id: u32 },
 }

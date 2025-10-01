@@ -39,6 +39,8 @@ pub struct Actor {
     pub is_dead: bool,
     pub max_hp: i32,
     pub current_hp: i32,
+    pub attack_power: i32,
+    pub defense_power: i32,
 }
 
 #[derive(Debug)]
@@ -47,6 +49,7 @@ pub struct Item {
     pub item_type: ItemType,
     pub position: TilePoint,
     carried: bool,
+    pub equipped: bool,
 }
 
 #[derive(Debug)]
@@ -88,6 +91,8 @@ impl Room {
             is_dead: false,
             max_hp: stats.max_hp,
             current_hp: stats.max_hp,
+            attack_power: stats.attack_power,
+            defense_power: stats.defense_power,
         });
         self.next_id += 1;
         id
@@ -105,6 +110,7 @@ impl Room {
             item_type,
             position,
             carried: false,
+            equipped: false,
         });
         self.next_id += 1;
         id
@@ -132,6 +138,10 @@ impl Room {
 
     pub fn get_player(&self) -> &Actor {
         &self.actors[self.player_index]
+    }
+
+    pub fn get_player_mut(&mut self) -> &mut Actor {
+        &mut self.actors[self.player_index]
     }
 
     pub fn get_actor(&self, actor_id: u32) -> &Actor {
@@ -168,12 +178,13 @@ impl Room {
     }
 
     fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> Vec<GameEvent> {
-        self.modify_hp(defender_index, -1);
+        let damage = (self.actors[attacker_index].attack_power - self.actors[defender_index].defense_power).max(0);
+        self.modify_hp(defender_index, -damage);
         let mut new_events = vec![
             GameEvent::MeleeAttack {
                 attacker_id: self.actors[attacker_index].id,
                 defender_id: self.actors[defender_index].id,
-                damage: 1,
+                damage: damage,
             }
         ];
         if self.actors[defender_index].is_dead {
@@ -236,6 +247,42 @@ impl Room {
         self.teleport_actor(actor_index, next_position);
         true
     }
+
+    fn equip_item(&mut self, item_id: u32) -> Vec<GameEvent> {
+        let mut events = vec![];
+        let item_data = content::get_item_data(self.get_item(item_id).item_type);
+
+        for &other_item_id in self.player_inventory.iter() {
+            let other_item = self.get_item(other_item_id);
+            if other_item.equipped && content::get_item_data(other_item.item_type).equip_slot == item_data.equip_slot {
+                events.push(self.unequip_item(other_item_id));
+                break;
+            }
+        }
+
+        self.get_item_mut(item_id).equipped = true;
+        if let Some(attack_bonus) = item_data.attack_bonus {
+            self.get_player_mut().attack_power += attack_bonus;
+        }
+        if let Some(defense_bonus) = item_data.defense_bonus {
+            self.get_player_mut().defense_power += defense_bonus;
+        }
+
+        events.push(GameEvent::EquippedItem { item_id });
+        events
+    }
+
+    fn unequip_item(&mut self, item_id: u32) -> GameEvent {
+        self.get_item_mut(item_id).equipped = false;
+        let item_data = content::get_item_data(self.get_item(item_id).item_type);
+        if let Some(attack_bonus) = item_data.attack_bonus {
+            self.get_player_mut().attack_power -= attack_bonus;
+        }
+        if let Some(defense_bonus) = item_data.defense_bonus {
+            self.get_player_mut().defense_power -= defense_bonus;
+        }
+        GameEvent::UnequippedItem { item_id }
+    }
 }
 
 fn create_blank_room(size: TileSize) -> Room {
@@ -259,6 +306,7 @@ pub enum Command {
     Fight { delta: TileDelta },
     GetItem { item_id: u32 },
     DropItem { item_id: u32 },
+    ToggleEquipment { item_id: u32 },
 }
 
 pub struct GameInstance {
@@ -302,9 +350,20 @@ impl GameInstance {
                 true
             },
             Command::DropItem { item_id } => {
+                if self.current_room.get_item(item_id).equipped {
+                    self.event_log.push(self.current_room.unequip_item(item_id));
+                }
                 self.current_room.get_item_mut(item_id).carried = false;
                 self.current_room.player_inventory.swap_remove(self.current_room.player_inventory.iter().position(|&id| id == item_id).unwrap());
                 self.event_log.push(GameEvent::DroppedItem { item_id });
+                true
+            },
+            Command::ToggleEquipment { item_id } => {
+                if self.current_room.get_item(item_id).equipped {
+                    self.event_log.push(self.current_room.unequip_item(item_id));
+                } else {
+                    self.event_log.append(&mut self.current_room.equip_item(item_id));
+                }
                 true
             },
         };
@@ -467,6 +526,79 @@ mod tests {
         game.execute_command(Command::DropItem { item_id });
         assert_eq!(vec![
             GameEvent::GotItem { item_id },
+            GameEvent::DroppedItem { item_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_wield_spear() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id = room.create_item(ItemType::BlackstoneSpear, vec2(1, 1));
+            item_id
+        };
+        let attack_power_pre = game.current_room.get_player().attack_power;
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::ToggleEquipment { item_id });
+        assert!(game.current_room.get_player().attack_power > attack_power_pre);
+
+        game.execute_command(Command::ToggleEquipment { item_id });
+        assert!(game.current_room.get_player().attack_power == attack_power_pre);
+
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::EquippedItem { item_id },
+            GameEvent::UnequippedItem { item_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_swap_equipment() {
+        let mut game = GameInstance::new();
+        let (id1, id2) = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id1 = room.create_item(ItemType::BlackstoneSpear, vec2(1, 1));
+            let item_id2 = room.create_item(ItemType::BlackstoneSpear, vec2(1, 1));
+            (item_id1, item_id2)
+        };
+        game.execute_command(Command::GetItem { item_id: id1 });
+        game.execute_command(Command::GetItem { item_id: id2 });
+        game.execute_command(Command::ToggleEquipment { item_id: id1 });
+        game.execute_command(Command::ToggleEquipment { item_id: id2 });
+        assert!(!game.current_room.get_item(id1).equipped);
+        assert!(game.current_room.get_item(id2).equipped);
+
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id: id1 },
+            GameEvent::GotItem { item_id: id2 },
+            GameEvent::EquippedItem { item_id: id1 },
+            GameEvent::UnequippedItem { item_id: id1 },
+            GameEvent::EquippedItem { item_id: id2 },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_drop_equipped_item() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id = room.create_item(ItemType::BlackstoneSpear, vec2(1, 1));
+            item_id
+        };
+        let attack_power_pre = game.current_room.get_player().attack_power;
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::ToggleEquipment { item_id });
+        game.execute_command(Command::DropItem { item_id });
+        assert!(game.current_room.get_player().attack_power == attack_power_pre);
+
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::EquippedItem { item_id },
+            GameEvent::UnequippedItem { item_id },
             GameEvent::DroppedItem { item_id },
         ], game.event_log);
     }
