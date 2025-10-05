@@ -98,5 +98,8 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::DroppedItem { item_id } => format!("dropped {}", get_item_name(item_id, type_table)),
         GameEvent::EquippedItem { item_id } => format!("{} {}", get_equipped_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
         GameEvent::UnequippedItem { item_id } => format!("{} {}", get_unequipped_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
+        GameEvent::AteItem { item_id } => format!("ate {}", get_item_name(item_id, type_table)),
+        GameEvent::ItemNotEdible { item_id } => format!("chewed on {}, ineffectually", get_item_name(item_id, type_table)),
+        GameEvent::EffectHealed { actor_id } => format!("{} is healed", get_actor_name(actor_id, player_name, type_table)),
     }
 }

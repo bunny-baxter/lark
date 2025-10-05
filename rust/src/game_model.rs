@@ -50,6 +50,7 @@ pub struct Item {
     pub position: TilePoint,
     carried: bool,
     pub equipped: bool,
+    pub destroyed: bool,
 }
 
 #[derive(Debug)]
@@ -111,9 +112,15 @@ impl Room {
             position,
             carried: false,
             equipped: false,
+            destroyed: false,
         });
         self.next_id += 1;
         id
+    }
+
+    pub fn destroy_item(&mut self, item_id: u32) {
+        self.get_item_mut(item_id).destroyed = true;
+        self.player_inventory.swap_remove(self.player_inventory.iter().position(|&id| id == item_id).unwrap());
     }
 
     pub fn find_actors_at(&self, position: TilePoint, include_dead: bool) -> Vec<usize> {
@@ -129,7 +136,7 @@ impl Room {
     pub fn find_loose_items_at(&self, position: TilePoint) -> Vec<usize> {
         let mut result = vec![];
         for i in 0..self.items.len() {
-            if self.items[i].position == position && !self.items[i].carried {
+            if self.items[i].position == position && !self.items[i].carried && !self.items[i].destroyed {
                 result.push(i);
             }
         }
@@ -158,6 +165,10 @@ impl Room {
 
     pub fn get_item_mut(&mut self, item_id: u32) -> &mut Item {
         self.items.iter_mut().find(|i| i.id == item_id).expect("get_item failed to find item")
+    }
+
+    pub fn get_item_data(&self, item_id: u32) -> &'static content::ItemData {
+        content::get_item_data(self.get_item(item_id).item_type)
     }
 
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
@@ -250,7 +261,7 @@ impl Room {
 
     fn equip_item(&mut self, item_id: u32) -> Vec<GameEvent> {
         let mut events = vec![];
-        let item_data = content::get_item_data(self.get_item(item_id).item_type);
+        let item_data = self.get_item_data(item_id);
 
         for &other_item_id in self.player_inventory.iter() {
             let other_item = self.get_item(other_item_id);
@@ -274,7 +285,7 @@ impl Room {
 
     fn unequip_item(&mut self, item_id: u32) -> GameEvent {
         self.get_item_mut(item_id).equipped = false;
-        let item_data = content::get_item_data(self.get_item(item_id).item_type);
+        let item_data = self.get_item_data(item_id);
         if let Some(attack_bonus) = item_data.attack_bonus {
             self.get_player_mut().attack_power -= attack_bonus;
         }
@@ -282,6 +293,19 @@ impl Room {
             self.get_player_mut().defense_power -= defense_bonus;
         }
         GameEvent::UnequippedItem { item_id }
+    }
+
+    fn eat_item(&mut self, item_id: u32) -> Vec<GameEvent> {
+        let mut events = vec![ GameEvent::AteItem { item_id } ];
+        match self.get_item(item_id).item_type {
+            ItemType::Bloodflower => {
+                self.modify_hp(self.player_index, 16);
+                events.push(GameEvent::EffectHealed { actor_id: self.get_player().id });
+                self.destroy_item(item_id);
+            },
+            _ => return vec![ GameEvent::ItemNotEdible { item_id } ],
+        };
+        events
     }
 }
 
@@ -307,6 +331,7 @@ pub enum Command {
     GetItem { item_id: u32 },
     DropItem { item_id: u32 },
     ToggleEquipment { item_id: u32 },
+    EatItem { item_id: u32 },
 }
 
 pub struct GameInstance {
@@ -364,6 +389,10 @@ impl GameInstance {
                 } else {
                     self.event_log.append(&mut self.current_room.equip_item(item_id));
                 }
+                true
+            },
+            Command::EatItem { item_id } => {
+                self.event_log.append(&mut self.current_room.eat_item(item_id));
                 true
             },
         };
@@ -600,6 +629,48 @@ mod tests {
             GameEvent::EquippedItem { item_id },
             GameEvent::UnequippedItem { item_id },
             GameEvent::DroppedItem { item_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_eat_bloodflower() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.get_player_mut().current_hp = 1;
+            let item_id = room.create_item(ItemType::Bloodflower, vec2(1, 1));
+            item_id
+        };
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::EatItem { item_id });
+        assert_eq!(game.current_room.get_player().max_hp, game.current_room.get_player().current_hp);
+        assert_eq!(0, game.current_room.player_inventory.len());
+        assert_eq!(0, game.current_room.find_loose_items_at(vec2(1, 1)).len());
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::AteItem { item_id },
+            GameEvent::EffectHealed { actor_id: game.current_room.get_player().id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_cant_eat_rock() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.get_player_mut().current_hp = 1;
+            let item_id = room.create_item(ItemType::LumpOfBlackstone, vec2(1, 1));
+            item_id
+        };
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::EatItem { item_id });
+        assert_eq!(1, game.current_room.get_player().current_hp);
+        assert_eq!(vec![ item_id ], game.current_room.player_inventory);
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::ItemNotEdible { item_id },
         ], game.event_log);
     }
 }

@@ -58,6 +58,9 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::DroppedItem { .. } => Color::LightYellow,
             GameEvent::EquippedItem { .. } => Color::LightYellow,
             GameEvent::UnequippedItem { .. } => Color::LightYellow,
+            GameEvent::AteItem { .. } => Color::LightYellow,
+            GameEvent::ItemNotEdible { .. } => Color::DarkGray,
+            GameEvent::EffectHealed { .. } => Color::LightGreen,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -200,6 +203,10 @@ impl TerminalApp {
             },
             KeyCode::Char('w') => if let Some(item_id) = self.get_selected_item_id() {
                 self.game.execute_command(Command::ToggleEquipment { item_id });
+                self.item_menu = None;
+            },
+            KeyCode::Char('e') => if let Some(item_id) = self.get_selected_item_id() {
+                self.game.execute_command(Command::EatItem { item_id });
                 self.item_menu = None;
             },
             KeyCode::Esc => self.item_menu = None,

@@ -43,4 +43,7 @@ pub enum GameEvent {
     DroppedItem { item_id: u32 },
     EquippedItem { item_id: u32 },
     UnequippedItem { item_id: u32 },
+    AteItem { item_id: u32 },
+    ItemNotEdible { item_id: u32 },
+    EffectHealed { actor_id: u32 },
 }
