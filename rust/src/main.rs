@@ -19,7 +19,7 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use game_model::{CellType, Command, GameInstance};
+use game_model::{CellType, Command, GameInstance, RoomGenerationConfig};
 use strings::NamedType;
 use types::*;
 use ui_common::ItemMenu;
@@ -35,6 +35,7 @@ fn display_for_cell_type(cell_type: CellType) -> CellDisplay {
         CellType::OutOfBounds | CellType::Empty => CellDisplay { c: ' ', fg_color: Color::Reset, bg_color: Color::Black },
         CellType::Floor => CellDisplay { c: '.', fg_color: Color::White, bg_color: Color::Black },
         CellType::DefaultWall => CellDisplay { c: '#', fg_color: Color::Black, bg_color: Color::White },
+        CellType::RoomExit => CellDisplay { c: 'o', fg_color: Color::White, bg_color: Color::LightBlue },
     }
 }
 
@@ -45,6 +46,7 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_item(ItemType::BlackstoneSpear, vec2(5, 1));
     game.current_room.create_item(ItemType::CarmineChainmail, vec2(5, 2));
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
+    game.current_room.set_exit(vec2(2, 0), RoomGenerationConfig::default());
 }
 
 fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, NamedType>) -> Vec<Line<'c>> {

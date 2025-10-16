@@ -4,13 +4,13 @@ pub type TilePoint = Vector2<i32>;
 pub type TileDelta = Vector2<i32>;
 pub type TileSize = Vector2<usize>;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ActorType {
     Player,
     Toad,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ItemType {
     LumpOfBlackstone,
     //LumpOfWhitestone,

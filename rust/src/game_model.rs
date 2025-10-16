@@ -1,3 +1,5 @@
+use std::collections:: HashMap;
+
 use cgmath::vec2;
 
 use crate::content;
@@ -10,6 +12,7 @@ pub enum CellType {
     Empty = 0,
     Floor = 1,
     DefaultWall,
+    RoomExit,
 }
 
 #[repr(C)]
@@ -30,7 +33,7 @@ fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
     return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Actor {
     pub id: u32,
     pub actor_type: ActorType,
@@ -43,7 +46,7 @@ pub struct Actor {
     pub defense_power: i32,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Item {
     pub id: u32,
     pub item_type: ItemType,
@@ -60,8 +63,13 @@ pub struct Room {
     pub actors: Vec<Actor>,
     pub items: Vec<Item>,
     pub player_inventory: Vec<u32>,
+    pub exits: HashMap<TilePoint, RoomGenerationConfig>,
     pub next_id: u32,
     pub player_index: usize,
+}
+
+#[derive(Debug, Default)]
+pub struct RoomGenerationConfig {
 }
 
 impl Room {
@@ -76,6 +84,7 @@ impl Room {
             actors: vec![],
             items: vec![],
             player_inventory: vec![],
+            exits: HashMap::new(),
             next_id: 0,
             player_index: 0,
         }
@@ -104,6 +113,18 @@ impl Room {
         self.player_index = self.actors.len() - 1;
     }
 
+    fn clone_actor(&mut self, other_actor: &Actor) -> u32 {
+        let id = self.next_id;
+        let mut new_actor = other_actor.clone();
+        new_actor.id = id;
+        self.actors.push(new_actor);
+        if other_actor.actor_type == ActorType::Player {
+            self.player_index = self.actors.len() - 1;
+        }
+        self.next_id += 1;
+        id
+    }
+
     pub fn create_item(&mut self, item_type: ItemType, position: TilePoint) -> u32 {
         let id = self.next_id;
         self.items.push(Item {
@@ -114,6 +135,15 @@ impl Room {
             equipped: false,
             destroyed: false,
         });
+        self.next_id += 1;
+        id
+    }
+
+    fn clone_item(&mut self, other_item: &Item) -> u32 {
+        let id = self.next_id;
+        let mut new_item = other_item.clone();
+        new_item.id = id;
+        self.items.push(new_item);
         self.next_id += 1;
         id
     }
@@ -141,6 +171,11 @@ impl Room {
             }
         }
         result
+    }
+
+    pub fn set_exit(&mut self, exit_position: TilePoint, next_room_config: RoomGenerationConfig) {
+        self.cells[exit_position.x as usize][exit_position.y as usize].cell_type = CellType::RoomExit;
+        self.exits.insert(exit_position, next_room_config);
     }
 
     pub fn get_player(&self) -> &Actor {
@@ -349,12 +384,29 @@ impl GameInstance {
         }
     }
 
+    fn change_rooms(&mut self) {
+        let mut new_room = create_blank_room(vec2(11, 7));
+        let new_player_position = vec2(2, 1);
+        new_room.clone_actor(self.current_room.get_player());
+        let mut new_inventory = vec![];
+        for &item_id in self.current_room.player_inventory.iter() {
+            new_inventory.push(new_room.clone_item(self.current_room.get_item(item_id)));
+        }
+        new_room.player_inventory = new_inventory;
+        new_room.teleport_actor(new_room.player_index, new_player_position);
+        self.current_room = new_room;
+    }
+
     pub fn execute_command(&mut self, command: Command) {
         let turn_ended = match command {
             Command::Wait => true,
             Command::Walk { delta } => {
                 let succeeded = self.current_room.actor_walk(self.current_room.player_index, delta);
-                if !succeeded {
+                if succeeded {
+                    if self.current_room.exits.contains_key(&self.current_room.get_player().position) {
+                        self.change_rooms();
+                    }
+                } else {
                     self.event_log.push(GameEvent::Bonk { actor_id: self.current_room.get_player().id });
                 }
                 succeeded
