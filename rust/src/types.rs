@@ -46,4 +46,5 @@ pub enum GameEvent {
     AteItem { item_id: u32 },
     ItemNotEdible { item_id: u32 },
     EffectHealed { actor_id: u32 },
+    SlowedByWater { actor_id: u32 },
 }

@@ -101,5 +101,6 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::AteItem { item_id } => format!("ate {}", get_item_name(item_id, type_table)),
         GameEvent::ItemNotEdible { item_id } => format!("chewed on {}, ineffectually", get_item_name(item_id, type_table)),
         GameEvent::EffectHealed { actor_id } => format!("{} is healed", get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::SlowedByWater { actor_id } => format!("{} is slowed wading in the water", get_actor_name(actor_id, player_name, type_table)),
     }
 }

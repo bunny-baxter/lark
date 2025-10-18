@@ -33,18 +33,34 @@ struct CellDisplay {
 fn display_for_cell_type(cell_type: CellType) -> CellDisplay {
     match cell_type {
         CellType::OutOfBounds | CellType::Empty => CellDisplay { c: ' ', fg_color: Color::Reset, bg_color: Color::Black },
-        CellType::Floor => CellDisplay { c: '.', fg_color: Color::White, bg_color: Color::Black },
+        CellType::DefaultFloor => CellDisplay { c: '.', fg_color: Color::White, bg_color: Color::Black },
+        CellType::FloorMoss => CellDisplay { c: ':', fg_color: Color::LightGreen, bg_color: Color::Black },
+        CellType::FloorThyme => CellDisplay { c: '"', fg_color: Color::Yellow, bg_color: Color::Black },
         CellType::DefaultWall => CellDisplay { c: '#', fg_color: Color::Black, bg_color: Color::White },
         CellType::RoomExit => CellDisplay { c: 'o', fg_color: Color::White, bg_color: Color::LightBlue },
+        CellType::Water => CellDisplay { c: '~', fg_color: Color::Cyan, bg_color: Color::Black },
     }
 }
 
 fn init_test_level(game: &mut GameInstance) {
+    game.current_room.set_cell(vec2(5, 1), CellType::Water);
+    game.current_room.set_cell(vec2(5, 2), CellType::Water);
+
+    game.current_room.set_cell(vec2(5, 3), CellType::FloorThyme);
+    game.current_room.set_cell(vec2(6, 1), CellType::FloorThyme);
+    game.current_room.set_cell(vec2(6, 2), CellType::FloorThyme);
+
+    game.current_room.set_cell(vec2(2, 4), CellType::FloorMoss);
+    game.current_room.set_cell(vec2(2, 5), CellType::FloorMoss);
+    game.current_room.set_cell(vec2(3, 4), CellType::FloorMoss);
+    game.current_room.set_cell(vec2(3, 5), CellType::FloorMoss);
+    game.current_room.set_cell(vec2(3, 6), CellType::FloorMoss);
+
     game.current_room.create_player(vec2(2, 1));
     game.current_room.create_actor(ActorType::Toad, vec2(4, 4));
     game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
-    game.current_room.create_item(ItemType::BlackstoneSpear, vec2(5, 1));
-    game.current_room.create_item(ItemType::CarmineChainmail, vec2(5, 2));
+    game.current_room.create_item(ItemType::BlackstoneSpear, vec2(8, 1));
+    game.current_room.create_item(ItemType::CarmineChainmail, vec2(8, 2));
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
     game.current_room.set_exit(vec2(2, 0), RoomGenerationConfig::default());
 }
@@ -63,6 +79,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::AteItem { .. } => Color::LightYellow,
             GameEvent::ItemNotEdible { .. } => Color::DarkGray,
             GameEvent::EffectHealed { .. } => Color::LightGreen,
+            GameEvent::SlowedByWater { .. } => Color::Cyan,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),

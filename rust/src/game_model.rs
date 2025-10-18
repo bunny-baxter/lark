@@ -6,13 +6,16 @@ use crate::content;
 use crate::types::*;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum CellType {
     OutOfBounds = -1,
     Empty = 0,
-    Floor = 1,
+    DefaultFloor = 1,
+    FloorMoss,
+    FloorThyme,
     DefaultWall,
     RoomExit,
+    Water,
 }
 
 #[repr(C)]
@@ -39,6 +42,7 @@ pub struct Actor {
     pub actor_type: ActorType,
     pub position: TilePoint,
     ai_data: i32,
+    skip_next_turn: bool,
     pub is_dead: bool,
     pub max_hp: i32,
     pub current_hp: i32,
@@ -72,6 +76,11 @@ pub struct Room {
 pub struct RoomGenerationConfig {
 }
 
+struct WalkResult {
+    succeeded: bool,
+    events: Vec<GameEvent>,
+}
+
 impl Room {
     fn new(size: TileSize) -> Self {
         let mut cells = Vec::with_capacity(size.x);
@@ -90,6 +99,10 @@ impl Room {
         }
     }
 
+    pub fn set_cell(&mut self, position: TilePoint, cell_type: CellType) {
+        self.cells[position.x as usize][position.y as usize].cell_type = cell_type;
+    }
+
     pub fn create_actor(&mut self, actor_type: ActorType, position: TilePoint) -> u32 {
         let id = self.next_id;
         let stats = content::get_base_stats(actor_type);
@@ -98,6 +111,7 @@ impl Room {
             actor_type,
             position,
             ai_data: 0,
+            skip_next_turn: false,
             is_dead: false,
             max_hp: stats.max_hp,
             current_hp: stats.max_hp,
@@ -174,7 +188,7 @@ impl Room {
     }
 
     pub fn set_exit(&mut self, exit_position: TilePoint, next_room_config: RoomGenerationConfig) {
-        self.cells[exit_position.x as usize][exit_position.y as usize].cell_type = CellType::RoomExit;
+        self.set_cell(exit_position, CellType::RoomExit);
         self.exits.insert(exit_position, next_room_config);
     }
 
@@ -240,12 +254,19 @@ impl Room {
     }
 
     fn run_monster_turn(&mut self, index: usize) -> Vec<GameEvent> {
+        if index == self.player_index {
+            return vec![];
+        }
         if self.actors[index].is_dead {
+            return vec![];
+        }
+        if self.actors[index].skip_next_turn {
+            self.actors[index].skip_next_turn = false;
             return vec![];
         }
         let mut new_events = vec![];
         match self.actors[index].actor_type {
-            ActorType::Player => (),
+            ActorType::Player => unreachable!(),
             ActorType::Toad => {
                 let distance_to_player = distance(self.get_player().position, self.actors[index].position);
                 if  distance_to_player == 1 {
@@ -269,7 +290,8 @@ impl Room {
         new_events
     }
 
-    fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) {
+    fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) -> Vec<GameEvent> {
+        let mut events = vec![];
         self.actors[actor_index].position = new_position;
         if actor_index == self.player_index {
             for item in self.items.iter_mut() {
@@ -278,20 +300,39 @@ impl Room {
                 }
             }
         }
+        let entered_cell_type = self.cells[new_position.x as usize][new_position.y as usize].cell_type;
+        if entered_cell_type == CellType::Water {
+            self.actors[actor_index].skip_next_turn = true;
+            events.push(GameEvent::SlowedByWater { actor_id: self.actors[actor_index].id });
+        }
+        events
     }
 
-    fn actor_walk(&mut self, actor_index: usize, delta: TileDelta) -> bool {
+    fn actor_walk(&mut self, actor_index: usize, delta: TileDelta) -> WalkResult {
         let next_position = self.actors[actor_index].position + delta;
         let next_cell_type = self.get_cell_type(next_position);
         match next_cell_type {
-            CellType::DefaultWall | CellType::OutOfBounds => return false,
+            CellType::DefaultWall => return WalkResult {
+                succeeded: false,
+                events: vec![ GameEvent::Bonk { actor_id: self.actors[actor_index].id } ],
+            },
+            CellType::OutOfBounds => return WalkResult {
+                succeeded: false,
+                events: vec![],
+            },
             _ => {},
         };
         if self.find_actors_at(next_position, false).len() > 0 {
-            return false;
+            return WalkResult {
+                succeeded: false,
+                events: vec![],
+            };
         }
-        self.teleport_actor(actor_index, next_position);
-        true
+        let events = self.teleport_actor(actor_index, next_position);
+        WalkResult {
+            succeeded: true,
+            events: events,
+        }
     }
 
     fn equip_item(&mut self, item_id: u32) -> Vec<GameEvent> {
@@ -351,7 +392,7 @@ fn create_blank_room(size: TileSize) -> Room {
             if x == 0 || y == 0 || x as usize == size.x - 1 || y as usize == size.y - 1 {
                 room.cells[x][y].cell_type = CellType::DefaultWall;
             } else {
-                room.cells[x][y].cell_type = CellType::Floor;
+                room.cells[x][y].cell_type = CellType::DefaultFloor;
             }
         }
     }
@@ -401,15 +442,14 @@ impl GameInstance {
         let turn_ended = match command {
             Command::Wait => true,
             Command::Walk { delta } => {
-                let succeeded = self.current_room.actor_walk(self.current_room.player_index, delta);
-                if succeeded {
+                let mut result = self.current_room.actor_walk(self.current_room.player_index, delta);
+                self.event_log.append(&mut result.events);
+                if result.succeeded {
                     if self.current_room.exits.contains_key(&self.current_room.get_player().position) {
                         self.change_rooms();
                     }
-                } else {
-                    self.event_log.push(GameEvent::Bonk { actor_id: self.current_room.get_player().id });
                 }
-                succeeded
+                result.succeeded
             }
             Command::Fight { delta } => {
                 let attack_position = self.current_room.get_player().position + delta;
@@ -453,6 +493,10 @@ impl GameInstance {
                 self.event_log.append(&mut self.current_room.run_monster_turn(i));
             }
             self.turn += 1;
+            if self.current_room.get_player().skip_next_turn {
+                self.current_room.get_player_mut().skip_next_turn = false;
+                self.execute_command(Command::Wait);
+            }
         }
     }
 }
@@ -723,6 +767,29 @@ mod tests {
         assert_eq!(vec![
             GameEvent::GotItem { item_id },
             GameEvent::ItemNotEdible { item_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_slowed_by_water() {
+        let mut game = GameInstance::new();
+        {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.set_cell(vec2(2, 1), CellType::Water);
+            room.set_cell(vec2(3, 1), CellType::Water);
+        }
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        assert_eq!(2, game.turn);
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        assert_eq!(4, game.turn);
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        assert_eq!(5, game.turn);
+
+        let player_id = game.current_room.get_player().id;
+        assert_eq!(vec![
+            GameEvent::SlowedByWater { actor_id: player_id },
+            GameEvent::SlowedByWater { actor_id: player_id },
         ], game.event_log);
     }
 }
