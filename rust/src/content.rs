@@ -62,11 +62,18 @@ const BLOODFLOWER_DATA: ItemData = ItemData {
     defense_bonus: None,
 };
 
+const WAND_OF_ICE_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Weapon,
+    attack_bonus: None,
+    defense_bonus: None,
+};
+
 pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
     match item_type {
         ItemType::LumpOfBlackstone => &LUMP_OF_BLACKSTONE_DATA,
         ItemType::BlackstoneSpear => &BLACKSTONE_SPEAR_DATA,
         ItemType::CarmineChainmail => &CARMINE_CHAINMAIL_DATA,
         ItemType::Bloodflower => &BLOODFLOWER_DATA,
+        ItemType::WandOfIce => &WAND_OF_ICE_DATA,
     }
 }

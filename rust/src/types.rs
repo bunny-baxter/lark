@@ -31,7 +31,7 @@ pub enum ItemType {
     //SunlightKnife,
     //ProwessRing,
     //VoidwalkingRing,
-    //WandOfIce,
+    WandOfIce,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -47,4 +47,7 @@ pub enum GameEvent {
     ItemNotEdible { item_id: u32 },
     EffectHealed { actor_id: u32 },
     SlowedByWater { actor_id: u32 },
+    ActivatedItem { item_id: u32 },
+    EffectIceDamage { actor_id: u32, damage: i32 },
+    NoEffect { item_id: u32 },
 }

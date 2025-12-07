@@ -200,10 +200,12 @@ impl Room {
         &mut self.actors[self.player_index]
     }
 
+    #[allow(unused)]
     pub fn get_actor(&self, actor_id: u32) -> &Actor {
         self.actors.iter().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
     }
 
+    #[allow(unused)]
     pub fn get_actor_mut(&mut self, actor_id: u32) -> &mut Actor {
         self.actors.iter_mut().find(|a| a.id == actor_id).expect("get_actor failed to find actor")
     }
@@ -383,6 +385,50 @@ impl Room {
         };
         events
     }
+
+    fn apply_item_to_actor(&mut self, item_id: u32, actor_index: usize) -> Vec<GameEvent> {
+        match self.get_item(item_id).item_type {
+            ItemType::WandOfIce => {
+                let damage = 4;
+                self.modify_hp(actor_index, -damage);
+                let mut new_events = vec![];
+                new_events.push(GameEvent::EffectIceDamage { actor_id: self.actors[actor_index].id, damage });
+                if self.actors[actor_index].is_dead {
+                    new_events.push(GameEvent::Death { actor_id: self.actors[actor_index].id });
+                }
+                new_events
+            },
+            _ => unreachable!(),
+        }
+    }
+
+    fn activate_item_by_direction(&mut self, item_id: u32, direction: TileDelta) -> Vec<GameEvent> {
+        assert_eq!(1, direction.x + direction.y);
+        let mut events = vec![ GameEvent::ActivatedItem { item_id } ];
+
+        if self.get_item(item_id).item_type != ItemType::WandOfIce {
+            events.push(GameEvent::NoEffect { item_id });
+            return events;
+        }
+
+        let mut current_position = self.get_player().position;
+        loop {
+            current_position += direction;
+            let other_actors = self.find_actors_at(current_position, false);
+            if other_actors.len() > 0 {
+                events.append(&mut self.apply_item_to_actor(item_id, other_actors[0]));
+                break;
+            }
+            let cell_type = self.get_cell_type(current_position);
+            match cell_type {
+                CellType::DefaultWall | CellType::OutOfBounds => break,
+                _ => {},
+            }
+        }
+        self.destroy_item(item_id);
+
+        events
+    }
 }
 
 fn create_blank_room(size: TileSize) -> Room {
@@ -408,6 +454,7 @@ pub enum Command {
     DropItem { item_id: u32 },
     ToggleEquipment { item_id: u32 },
     EatItem { item_id: u32 },
+    ActivateItemByDirection { item_id: u32, direction: TileDelta },
 }
 
 pub struct GameInstance {
@@ -485,6 +532,10 @@ impl GameInstance {
             },
             Command::EatItem { item_id } => {
                 self.event_log.append(&mut self.current_room.eat_item(item_id));
+                true
+            },
+            Command::ActivateItemByDirection { item_id, direction } => {
+                self.event_log.append(&mut self.current_room.activate_item_by_direction(item_id, direction));
                 true
             },
         };
@@ -790,6 +841,51 @@ mod tests {
         assert_eq!(vec![
             GameEvent::SlowedByWater { actor_id: player_id },
             GameEvent::SlowedByWater { actor_id: player_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_hit_monster_with_wand() {
+        let mut game = GameInstance::new();
+        let (item_id, monster_id) = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            let item_id = room.create_item(ItemType::WandOfIce, vec2(1, 1));
+            let monster_id = room.create_actor(ActorType::Toad, vec2(3, 1));
+            (item_id, monster_id)
+        };
+        let monster_max_hp = game.current_room.get_actor(monster_id).max_hp;
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::ActivateItemByDirection { item_id, direction: vec2(1, 0) });
+        assert!(game.current_room.get_actor(monster_id).current_hp < monster_max_hp);
+
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::ActivatedItem { item_id },
+            GameEvent::EffectIceDamage { actor_id: monster_id, damage: 4 },
+            GameEvent::Death { actor_id: monster_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_wand_beam_ends_at_wall() {
+        let mut game = GameInstance::new();
+        let (item_id, monster_id) = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.set_cell(vec2(2, 1), CellType::DefaultWall);
+            let item_id = room.create_item(ItemType::WandOfIce, vec2(1, 1));
+            let monster_id = room.create_actor(ActorType::Toad, vec2(3, 1));
+            (item_id, monster_id)
+        };
+        let monster_max_hp = game.current_room.get_actor(monster_id).max_hp;
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::ActivateItemByDirection { item_id, direction: vec2(1, 0) });
+        assert!(game.current_room.get_actor(monster_id).current_hp == monster_max_hp);
+
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::ActivatedItem { item_id },
         ], game.event_log);
     }
 }

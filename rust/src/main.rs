@@ -59,6 +59,7 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_player(vec2(2, 1));
     game.current_room.create_actor(ActorType::Toad, vec2(4, 4));
     game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
+    game.current_room.create_item(ItemType::WandOfIce, vec2(3, 1));
     game.current_room.create_item(ItemType::BlackstoneSpear, vec2(8, 1));
     game.current_room.create_item(ItemType::CarmineChainmail, vec2(8, 2));
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
@@ -80,6 +81,9 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::ItemNotEdible { .. } => Color::DarkGray,
             GameEvent::EffectHealed { .. } => Color::LightGreen,
             GameEvent::SlowedByWater { .. } => Color::Cyan,
+            GameEvent::ActivatedItem { .. } => Color::LightYellow,
+            GameEvent::EffectIceDamage { .. } => Color::Red,
+            GameEvent::NoEffect { .. } => Color::DarkGray,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -93,6 +97,7 @@ pub struct TerminalApp {
     game: GameInstance,
     unread_event_index: usize,
     item_menu: Option<ItemMenu>,
+    direction_selection_item: Option<u32>,
     exit: bool,
 }
 
@@ -104,6 +109,7 @@ impl TerminalApp {
             game,
             unread_event_index: 0,
             item_menu: None,
+            direction_selection_item: None,
             exit: false,
         }
     }
@@ -149,6 +155,7 @@ impl TerminalApp {
                 ItemType::BlackstoneSpear => "|".gray().on_black(),
                 ItemType::CarmineChainmail => "[".red().on_black(),
                 ItemType::Bloodflower => "%".light_red().on_black(),
+                ItemType::WandOfIce => "/".light_cyan().on_black(),
             };
         }
 
@@ -228,7 +235,35 @@ impl TerminalApp {
                 self.game.execute_command(Command::EatItem { item_id });
                 self.item_menu = None;
             },
+            KeyCode::Char('v') => if let Some(item_id) = self.get_selected_item_id() {
+                self.direction_selection_item = Some(item_id);
+                self.item_menu = None;
+            },
             KeyCode::Esc => self.item_menu = None,
+            _ => {}
+        }
+    }
+
+    fn handle_key_direction_selection(&mut self, key_code: KeyCode) {
+        match key_code {
+            KeyCode::Char('q') => self.exit = true,
+            KeyCode::Left | KeyCode::Char('h') => {
+                self.game.execute_command(Command::ActivateItemByDirection { item_id: self.direction_selection_item.unwrap(), direction: vec2(-1, 0) });
+                self.direction_selection_item = None;
+            },
+            KeyCode::Right | KeyCode::Char('l') => {
+                self.game.execute_command(Command::ActivateItemByDirection { item_id: self.direction_selection_item.unwrap(), direction: vec2(1, 0) });
+                self.direction_selection_item = None;
+            },
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.game.execute_command(Command::ActivateItemByDirection { item_id: self.direction_selection_item.unwrap(), direction: vec2(0, -1) });
+                self.direction_selection_item = None;
+            },
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.game.execute_command(Command::ActivateItemByDirection { item_id: self.direction_selection_item.unwrap(), direction: vec2(0, 1) });
+                self.direction_selection_item = None;
+            },
+            KeyCode::Esc => self.direction_selection_item = None,
             _ => {}
         }
     }
@@ -236,6 +271,8 @@ impl TerminalApp {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         if self.item_menu.is_some() {
             self.handle_key_item_menu(key_event.code);
+        } else if self.direction_selection_item.is_some() {
+            self.handle_key_direction_selection(key_event.code);
         } else {
             self.handle_key_main_screen(key_event.code);
         }
@@ -274,7 +311,7 @@ impl TerminalApp {
         Paragraph::new(map_text)
             .centered()
             .block(map_block)
-            .render(Rect::new(0, 0, 46, 13), buf);
+            .render(Rect::new(0, 0, 64, 18), buf);
     }
 
     fn render_item_menu(&self, buf: &mut Buffer, type_table: &HashMap<u32, NamedType>) {
@@ -308,7 +345,7 @@ impl TerminalApp {
         Paragraph::new(Text::from(lines_vec))
             .left_aligned()
             .block(menu_block)
-            .render(Rect::new(0, 0, 46, 13), buf);
+            .render(Rect::new(0, 0, 64, 18), buf);
     }
 }
 
@@ -322,18 +359,30 @@ impl Widget for &TerminalApp {
             self.render_main_screen(buf);
         }
 
-        let unread_events = &self.game.event_log[self.unread_event_index..];
-        if unread_events.len() > 0 {
+        let lines = if self.direction_selection_item.is_some() {
+            let parts = vec![
+                "?> ".light_yellow(),
+                strings::DIRECTION_SELECTION_PROMPT.white(),
+            ];
+            vec![ Line::from(parts) ]
+        } else {
+            let unread_events = &self.game.event_log[self.unread_event_index..];
+            if unread_events.len() > 0 {
+                create_lines_for_events(&unread_events, &type_table)
+            } else {
+                vec![]
+            }
+        };
+        if lines.len() > 0 {
             let event_block = Block::bordered()
                 .padding(Padding::horizontal(1))
                 .border_type(ratatui::widgets::BorderType::Thick);
-            let lines = create_lines_for_events(&unread_events, &type_table);
             // TODO: Handle the case where we have more than 8 unread lines. Right now this will just truncate them.
             let height = (2 + lines.len().min(8)) as u16;
             Paragraph::new(Text::from(lines))
                 .left_aligned()
                 .block(event_block)
-                .render(Rect::new(0, 13, 46, height), buf);
+                .render(Rect::new(0, 18, 64, height), buf);
         }
     }
 }

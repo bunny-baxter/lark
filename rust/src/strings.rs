@@ -5,6 +5,8 @@ use crate::types::{ActorType, ItemType, GameEvent};
 
 pub const EMPTY_INVENTORY: &str = "nothing is being carried";
 
+pub const DIRECTION_SELECTION_PROMPT: &str = "In which direction?";
+
 pub enum NamedType {
     ActorType { actor_type: ActorType },
     ItemType { item_type: ItemType },
@@ -23,6 +25,7 @@ pub fn item_type_to_name(item_type: ItemType) -> &'static str {
         ItemType::BlackstoneSpear => "blackstone spear",
         ItemType::CarmineChainmail => "carmine chainmail",
         ItemType::Bloodflower => "bloodflower",
+        ItemType::WandOfIce => "wand of ice",
     }
 }
 
@@ -72,7 +75,7 @@ pub fn get_equipped_participle(item_id: u32, type_table: &HashMap<u32, NamedType
     }
 }
 
-pub fn get_unequipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
+fn get_unequipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
     let item_type = type_table.get(&item_id);
     match item_type {
         Some(NamedType::ItemType { item_type }) => {
@@ -85,6 +88,10 @@ pub fn get_unequipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedTyp
         },
         _ => "((unknown))",
     }
+}
+
+fn get_activated_past_verb(_item_id: u32, _type_table: &HashMap<u32, NamedType>) -> &'static str {
+    "invoked"
 }
 
 pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32, NamedType>) -> String {
@@ -102,5 +109,8 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::ItemNotEdible { item_id } => format!("chewed on {}, ineffectually", get_item_name(item_id, type_table)),
         GameEvent::EffectHealed { actor_id } => format!("{} is healed", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::SlowedByWater { actor_id } => format!("{} is slowed wading in the water", get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::ActivatedItem { item_id } => format!("{} {}", get_activated_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
+        GameEvent::EffectIceDamage { actor_id, damage } => format!("\u{2744}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::NoEffect { item_id } => format!("{} has no effect", get_item_name(item_id, type_table)),
     }
 }
