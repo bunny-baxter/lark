@@ -58,6 +58,7 @@ fn init_test_level(game: &mut GameInstance) {
 
     game.current_room.create_player(vec2(2, 1));
     game.current_room.create_actor(ActorType::Toad, vec2(4, 4));
+    game.current_room.create_actor(ActorType::MouseWarrior, vec2(11, 7));
     game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
     game.current_room.create_item(ItemType::WandOfIce, vec2(3, 1));
     game.current_room.create_item(ItemType::BlackstoneSpear, vec2(8, 1));
@@ -135,6 +136,7 @@ impl TerminalApp {
             let mut c = match actor.actor_type {
                 ActorType::Player => "@".light_yellow().on_black(),
                 ActorType::Toad => "t".light_green().on_black(),
+                ActorType::MouseWarrior => "m".light_magenta().on_black(),
             };
             if actor.is_dead {
                 c = c.dark_gray();

@@ -6,22 +6,29 @@ pub struct ActorBaseStats {
     pub defense_power: i32,
 }
 
-const PLAYER_BASE_STATS: ActorBaseStats = ActorBaseStats {
+const PLAYER_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 10,
     attack_power: 1,
     defense_power: 0,
 };
 
-const TOAD_BASE_STATS: ActorBaseStats = ActorBaseStats {
+const TOAD_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 4,
     attack_power: 1,
     defense_power: 0,
 };
 
+const MOUSE_WARRIOR_STATS: ActorBaseStats = ActorBaseStats {
+    max_hp: 8,
+    attack_power: 3,
+    defense_power: 1,
+};
+
 pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
     match actor_type {
-        ActorType::Player => &PLAYER_BASE_STATS,
-        ActorType::Toad => &TOAD_BASE_STATS,
+        ActorType::Player => &PLAYER_STATS,
+        ActorType::Toad => &TOAD_STATS,
+        ActorType::MouseWarrior => &MOUSE_WARRIOR_STATS,
     }
 }
 

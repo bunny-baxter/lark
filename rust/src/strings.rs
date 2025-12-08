@@ -16,6 +16,7 @@ fn actor_type_to_name(actor_type: ActorType) -> &'static str {
     match actor_type {
         ActorType::Player => "((player))",
         ActorType::Toad => "mortal toad",
+        ActorType::MouseWarrior => "mouse warrior",
     }
 }
 

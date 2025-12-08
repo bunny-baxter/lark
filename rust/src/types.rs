@@ -8,6 +8,7 @@ pub type TileSize = Vector2<usize>;
 pub enum ActorType {
     Player,
     Toad,
+    MouseWarrior,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
