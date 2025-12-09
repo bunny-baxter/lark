@@ -1,7 +1,6 @@
-mod content;
+mod data;
 mod game_model;
 mod strings;
-mod types;
 mod ui_common;
 
 use std::collections::HashMap;
@@ -21,7 +20,7 @@ use ratatui::{
 
 use game_model::{CellType, Command, GameInstance, RoomGenerationConfig};
 use strings::NamedType;
-use types::*;
+use data::{ActorType, ItemType, GameEvent, TilePoint, TileDelta};
 use ui_common::ItemMenu;
 
 struct CellDisplay {

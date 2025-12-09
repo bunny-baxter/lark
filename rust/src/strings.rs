@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use crate::content::{EquipSlot, get_item_data};
-use crate::types::{ActorType, ItemType, GameEvent};
+use crate::data::{ActorType, ItemType, GameEvent, EquipSlot, get_item_data};
 
 pub const EMPTY_INVENTORY: &str = "nothing is being carried";
 

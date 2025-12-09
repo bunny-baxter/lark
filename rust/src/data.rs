@@ -1,4 +1,15 @@
-use crate::types::{ActorType, ItemType};
+use cgmath::Vector2;
+
+pub type TilePoint = Vector2<i32>;
+pub type TileDelta = Vector2<i32>;
+pub type TileSize = Vector2<usize>;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ActorType {
+    Player,
+    Toad,
+    MouseWarrior,
+}
 
 pub struct ActorBaseStats {
     pub max_hp: i32,
@@ -30,6 +41,30 @@ pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
         ActorType::Toad => &TOAD_STATS,
         ActorType::MouseWarrior => &MOUSE_WARRIOR_STATS,
     }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ItemType {
+    LumpOfBlackstone,
+    //LumpOfWhitestone,
+    BlackstoneSpear,
+    //WhitestoneSpear,
+    //CarmineSword,
+    //ViridianSword,
+    CarmineChainmail,
+    //ViridianChainmail,
+    //CarmineHelm,
+    //ViridianHelm,
+    //FeatheredCavalier,
+    Bloodflower,
+    //Azureberry,
+    //Indigoberry,
+    //PoulticeOfPurple,
+    //MoonlightKnife,
+    //SunlightKnife,
+    //ProwessRing,
+    //VoidwalkingRing,
+    WandOfIce,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -83,4 +118,22 @@ pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
         ItemType::Bloodflower => &BLOODFLOWER_DATA,
         ItemType::WandOfIce => &WAND_OF_ICE_DATA,
     }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum GameEvent {
+    Bonk { actor_id: u32 },
+    MeleeAttack { attacker_id: u32, defender_id: u32, damage: i32 },
+    Death { actor_id: u32 },
+    GotItem { item_id: u32 },
+    DroppedItem { item_id: u32 },
+    EquippedItem { item_id: u32 },
+    UnequippedItem { item_id: u32 },
+    AteItem { item_id: u32 },
+    ItemNotEdible { item_id: u32 },
+    EffectHealed { actor_id: u32 },
+    SlowedByWater { actor_id: u32 },
+    ActivatedItem { item_id: u32 },
+    EffectIceDamage { actor_id: u32, damage: i32 },
+    NoEffect { item_id: u32 },
 }

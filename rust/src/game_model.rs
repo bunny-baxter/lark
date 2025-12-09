@@ -2,8 +2,7 @@ use std::collections:: HashMap;
 
 use cgmath::vec2;
 
-use crate::content;
-use crate::types::*;
+use crate::data::{ActorType, ItemType, GameEvent, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData};
 
 #[repr(C)]
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -105,7 +104,7 @@ impl Room {
 
     pub fn create_actor(&mut self, actor_type: ActorType, position: TilePoint) -> u32 {
         let id = self.next_id;
-        let stats = content::get_base_stats(actor_type);
+        let stats = get_base_stats(actor_type);
         self.actors.push(Actor {
             id,
             actor_type,
@@ -218,8 +217,8 @@ impl Room {
         self.items.iter_mut().find(|i| i.id == item_id).expect("get_item failed to find item")
     }
 
-    pub fn get_item_data(&self, item_id: u32) -> &'static content::ItemData {
-        content::get_item_data(self.get_item(item_id).item_type)
+    pub fn get_item_data(&self, item_id: u32) -> &'static ItemData {
+        get_item_data(self.get_item(item_id).item_type)
     }
 
     pub fn get_cell_type(&self, position: TilePoint) -> CellType {
@@ -360,7 +359,7 @@ impl Room {
 
         for &other_item_id in self.player_inventory.iter() {
             let other_item = self.get_item(other_item_id);
-            if other_item.equipped && content::get_item_data(other_item.item_type).equip_slot == item_data.equip_slot {
+            if other_item.equipped && get_item_data(other_item.item_type).equip_slot == item_data.equip_slot {
                 events.push(self.unequip_item(other_item_id));
                 break;
             }
