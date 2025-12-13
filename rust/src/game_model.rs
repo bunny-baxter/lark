@@ -2,33 +2,13 @@ use std::collections:: HashMap;
 
 use cgmath::vec2;
 
-use crate::data::{ActorType, ItemType, GameEvent, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData};
+use crate::data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData};
+use crate::generate::RoomGenerationConfig;
 
 #[repr(C)]
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum CellType {
-    OutOfBounds = -1,
-    Empty = 0,
-    DefaultFloor = 1,
-    FloorMoss,
-    FloorThyme,
-    DefaultWall,
-    RoomExit,
-    Water,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Cell {
     cell_type: CellType,
-}
-
-impl Default for Cell {
-    fn default() -> Self {
-        Cell {
-            cell_type: CellType::Empty,
-        }
-    }
 }
 
 fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
@@ -69,10 +49,6 @@ pub struct Room {
     pub exits: HashMap<TilePoint, RoomGenerationConfig>,
     pub next_id: u32,
     pub player_index: usize,
-}
-
-#[derive(Debug, Default)]
-pub struct RoomGenerationConfig {
 }
 
 struct WalkResult {

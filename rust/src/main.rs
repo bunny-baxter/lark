@@ -1,5 +1,6 @@
 mod data;
 mod game_model;
+mod generate;
 mod strings;
 mod ui_common;
 
@@ -18,9 +19,10 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use game_model::{CellType, Command, GameInstance, RoomGenerationConfig};
+use data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta};
+use game_model::{Command, GameInstance};
+use generate::RoomGenerationConfig;
 use strings::NamedType;
-use data::{ActorType, ItemType, GameEvent, TilePoint, TileDelta};
 use ui_common::ItemMenu;
 
 struct CellDisplay {

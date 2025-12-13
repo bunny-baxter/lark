@@ -4,6 +4,20 @@ pub type TilePoint = Vector2<i32>;
 pub type TileDelta = Vector2<i32>;
 pub type TileSize = Vector2<usize>;
 
+#[repr(C)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
+pub enum CellType {
+    OutOfBounds = -1,
+    #[default]
+    Empty = 0,
+    DefaultFloor = 1,
+    FloorMoss,
+    FloorThyme,
+    DefaultWall,
+    RoomExit,
+    Water,
+}
+
 #[allow(unused)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ActorType {
