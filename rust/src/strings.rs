@@ -17,6 +17,7 @@ fn actor_type_to_name(actor_type: ActorType) -> &'static str {
         ActorType::Toad => "mortal toad",
         ActorType::MouseWarrior => "mouse warrior",
         ActorType::ToothyStarling => "toothy starling",
+        ActorType::DustySkeleton => "dusty skeleton",
     }
 }
 

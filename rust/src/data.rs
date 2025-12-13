@@ -11,6 +11,7 @@ pub enum ActorType {
     Toad,
     MouseWarrior,
     ToothyStarling,
+    DustySkeleton,
 }
 
 pub struct ActorBaseStats {
@@ -43,12 +44,19 @@ const TOOTHY_STARLING_STATS: ActorBaseStats = ActorBaseStats {
     defense_power: 0,
 };
 
+const DUSTY_SKELETON_STATS: ActorBaseStats = ActorBaseStats {
+    max_hp: 5,
+    attack_power: 2,
+    defense_power: 1,
+};
+
 pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
     match actor_type {
         ActorType::Player => &PLAYER_STATS,
         ActorType::Toad => &TOAD_STATS,
         ActorType::MouseWarrior => &MOUSE_WARRIOR_STATS,
         ActorType::ToothyStarling => &TOOTHY_STARLING_STATS,
+        ActorType::DustySkeleton => &DUSTY_SKELETON_STATS,
     }
 }
 

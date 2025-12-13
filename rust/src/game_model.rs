@@ -323,6 +323,25 @@ impl Room {
                     self.actor_walk(index, delta);
                 }
             },
+            ActorType::DustySkeleton => {
+                let distance_to_player = distance(self.get_player().position, self.actors[index].position);
+                if  distance_to_player == 1 {
+                    new_events.append(&mut self.melee_attack(index, self.player_index));
+                } else {
+                    let delta = match self.actors[index].ai_data {
+                        0 => vec2(1, 0),
+                        1 => vec2(0, 1),
+                        2 => vec2(-1, 0),
+                        3 => vec2(0, -1),
+                        _ => unreachable!(),
+                    };
+                    let walk_result = self.actor_walk(index, delta);
+                    if !walk_result.succeeded {
+                        // Hit a wall, turn 90 degrees clockwise
+                        self.actors[index].ai_data = (self.actors[index].ai_data + 1) % 4;
+                    }
+                }
+            },
         }
         new_events
     }
