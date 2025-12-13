@@ -57,6 +57,8 @@ fn init_test_level(game: &mut GameInstance) {
 
     game.current_room.create_player(vec2(2, 1));
     game.current_room.create_actor(ActorType::ToothyStarling, vec2(4, 4));
+    game.current_room.create_actor(ActorType::BlueJelly, vec2(8, 5));
+    game.current_room.create_actor(ActorType::BlueJelly, vec2(8, 7));
     game.current_room.create_actor(ActorType::DustySkeleton, vec2(11, 7));
     game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
     game.current_room.create_item(ItemType::WandOfIce, vec2(3, 1));
@@ -138,6 +140,7 @@ impl TerminalApp {
                 ActorType::MouseWarrior => "m".light_magenta().on_black(),
                 ActorType::ToothyStarling => "s".light_cyan().on_black(),
                 ActorType::DustySkeleton => "z".white().on_black(),
+                ActorType::BlueJelly => "j".light_blue().on_black(),
             };
             if actor.is_dead {
                 c = c.dark_gray();

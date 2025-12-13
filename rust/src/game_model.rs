@@ -306,21 +306,31 @@ impl Room {
                     }
                 }
             },
-            ActorType::MouseWarrior => {
-                let actor_pos = self.actors[index].position;
-                let player_pos = self.get_player().position;
-                let distance_to_player = distance(player_pos, actor_pos);
-                if  distance_to_player == 1 {
-                    new_events.append(&mut self.melee_attack(index, self.player_index));
-                } else {
-                    let dx = player_pos.x - actor_pos.x;
-                    let dy = player_pos.y - actor_pos.y;
-                    let delta = if dx.abs() > dy.abs() {
-                        vec2(dx.signum(), 0)
+            ActorType::MouseWarrior | ActorType::BlueJelly => {
+                let should_act = match self.actors[index].actor_type {
+                    ActorType::BlueJelly => {
+                        let acts_this_turn = self.actors[index].ai_data % 2 == 0;
+                        self.actors[index].ai_data += 1;
+                        acts_this_turn
+                    },
+                    _ => true,
+                };
+                if should_act {
+                    let actor_pos = self.actors[index].position;
+                    let player_pos = self.get_player().position;
+                    let distance_to_player = distance(player_pos, actor_pos);
+                    if  distance_to_player == 1 {
+                        new_events.append(&mut self.melee_attack(index, self.player_index));
                     } else {
-                        vec2(0, dy.signum())
-                    };
-                    self.actor_walk(index, delta);
+                        let dx = player_pos.x - actor_pos.x;
+                        let dy = player_pos.y - actor_pos.y;
+                        let delta = if dx.abs() > dy.abs() {
+                            vec2(dx.signum(), 0)
+                        } else {
+                            vec2(0, dy.signum())
+                        };
+                        self.actor_walk(index, delta);
+                    }
                 }
             },
             ActorType::DustySkeleton => {
