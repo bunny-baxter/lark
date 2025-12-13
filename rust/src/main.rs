@@ -129,9 +129,10 @@ impl TerminalApp {
     }
 
     fn get_char_for_cell(&self, position: TilePoint) -> Span<'_> {
-        let actors = self.game.current_room.find_actors_at(position, true);
+        let mut actors = self.game.current_room.find_actors_at(position, true);
         if actors.len() > 0 {
-            // TODO: Should sort `actors` by which should be on top.
+            // Sort so alive actors are displayed above dead actors
+            actors.sort_by_key(|&index| self.game.current_room.actors[index].is_dead);
             let actor_index = actors[0];
             let actor = &self.game.current_room.actors[actor_index];
             let mut c = match actor.actor_type {
