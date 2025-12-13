@@ -268,21 +268,40 @@ impl Room {
         let mut new_events = vec![];
         match self.actors[index].actor_type {
             ActorType::Player => unreachable!(),
-            ActorType::Toad => {
+            ActorType::Toad | ActorType::ToothyStarling => {
                 let distance_to_player = distance(self.get_player().position, self.actors[index].position);
                 if  distance_to_player == 1 {
                     new_events.append(&mut self.melee_attack(index, self.player_index));
                 } else {
-                    let walk_delta = match self.actors[index].ai_data {
-                        0 => vec2(1, 0),
-                        1 => vec2(0, 1),
-                        2 => vec2(-1, 0),
-                        3 => vec2(0, -1),
+                    const TOAD_PATROL_PATTERN: &[&[TileDelta]] = &[
+                        &[vec2(1, 0)],
+                        &[vec2(0, 1)],
+                        &[vec2(-1, 0)],
+                        &[vec2(0, -1)],
+                    ];
+                    // ..*..
+                    // *.*.*
+                    // .....
+                    // .*.*.
+                    const STARLING_PATROL_PATTERN: &[&[TileDelta]] = &[
+                        &[vec2(0, 1), vec2(1, 0), vec2(1, 0)],
+                        &[vec2(-1, 0), vec2(0, 1), vec2(0, 1)],
+                        &[vec2(0, -1), vec2(0, -1), vec2(-1, 0)],
+                        &[vec2(-1, 0), vec2(0, 1), vec2(0, 1)],
+                        &[vec2(0, -1), vec2(0, -1), vec2(-1, 0)],
+                        &[vec2(1, 0), vec2(1, 0), vec2(0, -1)],
+                    ];
+                    let patrol_pattern = match self.actors[index].actor_type {
+                        ActorType::Toad => TOAD_PATROL_PATTERN,
+                        ActorType::ToothyStarling => STARLING_PATROL_PATTERN,
                         _ => unreachable!(),
                     };
-                    self.actor_walk(index, walk_delta);
+                    let deltas = patrol_pattern[self.actors[index].ai_data as usize];
+                    for &delta in deltas.iter() {
+                        self.actor_walk(index, delta);
+                    }
                     self.actors[index].ai_data += 1;
-                    if self.actors[index].ai_data > 3 {
+                    if self.actors[index].ai_data >= patrol_pattern.len() as i32 {
                         self.actors[index].ai_data = 0;
                     }
                 }

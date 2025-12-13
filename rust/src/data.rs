@@ -4,11 +4,13 @@ pub type TilePoint = Vector2<i32>;
 pub type TileDelta = Vector2<i32>;
 pub type TileSize = Vector2<usize>;
 
+#[allow(unused)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ActorType {
     Player,
     Toad,
     MouseWarrior,
+    ToothyStarling,
 }
 
 pub struct ActorBaseStats {
@@ -35,11 +37,18 @@ const MOUSE_WARRIOR_STATS: ActorBaseStats = ActorBaseStats {
     defense_power: 1,
 };
 
+const TOOTHY_STARLING_STATS: ActorBaseStats = ActorBaseStats {
+    max_hp: 6,
+    attack_power: 2,
+    defense_power: 0,
+};
+
 pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
     match actor_type {
         ActorType::Player => &PLAYER_STATS,
         ActorType::Toad => &TOAD_STATS,
         ActorType::MouseWarrior => &MOUSE_WARRIOR_STATS,
+        ActorType::ToothyStarling => &TOOTHY_STARLING_STATS,
     }
 }
 
