@@ -4,7 +4,15 @@ pub type TilePoint = Vector2<i32>;
 pub type TileDelta = Vector2<i32>;
 pub type TileSize = Vector2<usize>;
 
+pub const NEIGHBORS: &[(i32, i32)] = &[
+    (-1, 0),
+    (0, -1),
+    (1, 0),
+    (0, 1),
+];
+
 #[repr(C)]
+#[allow(unused)]
 #[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
 pub enum CellType {
     OutOfBounds = -1,
@@ -82,6 +90,7 @@ pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
     }
 }
 
+#[allow(unused)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ItemType {
     LumpOfBlackstone,

@@ -507,7 +507,7 @@ impl GameInstance {
     pub fn new() -> Self {
         GameInstance {
             turn: 0,
-            current_room: create_blank_room(vec2(13, 9)),
+            current_room: create_blank_room(vec2(19, 11)),
             event_log: vec![],
         }
     }
