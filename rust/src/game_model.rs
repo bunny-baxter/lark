@@ -1,4 +1,4 @@
-use std::collections:: HashMap;
+use std::collections:: {HashMap, HashSet};
 
 use cgmath::vec2;
 
@@ -13,6 +13,43 @@ pub struct Cell {
 
 fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
     return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
+}
+
+// https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#Rust
+fn bresenham_line(p1: TilePoint, p2: TilePoint) -> Vec<TilePoint> {
+    let x1 = p1.x;
+    let y1 = p1.y;
+    let x2 = p2.x;
+    let y2 = p2.y;
+
+    let mut coordinates: Vec<TilePoint> = vec![];
+
+    let dx:i32 = i32::abs(x2 - x1);
+    let dy:i32 = i32::abs(y2 - y1);
+    let sx:i32 = { if x1 < x2 { 1 } else { -1 } };
+    let sy:i32 = { if y1 < y2 { 1 } else { -1 } };
+
+    let mut error:i32 = (if dx > dy  { dx } else { -dy }) / 2;
+    let mut current_x:i32 = x1;
+    let mut current_y:i32 = y1;
+    loop {
+        coordinates.push(vec2(current_x, current_y));
+
+        if current_x == x2 && current_y == y2 { break; }
+
+        let error2:i32 = error;
+
+        if error2 > -dx {
+            error -= dy;
+            current_x += sx;
+        }
+        if error2 < dy {
+            error += dx;
+            current_y += sy;
+        }
+    }
+
+    coordinates
 }
 
 #[derive(Clone, Debug)]
@@ -46,6 +83,8 @@ pub struct Room {
     pub actors: Vec<Actor>,
     pub items: Vec<Item>,
     pub player_inventory: Vec<u32>,
+    pub visible: HashSet<TilePoint>,
+    pub explored: HashSet<TilePoint>,
     pub exits: HashMap<TilePoint, RoomGenerationConfig>,
     pub next_id: u32,
     pub player_index: usize,
@@ -68,6 +107,8 @@ impl Room {
             actors: vec![],
             items: vec![],
             player_inventory: vec![],
+            visible: HashSet::new(),
+            explored: HashSet::new(),
             exits: HashMap::new(),
             next_id: 0,
             player_index: 0,
@@ -100,6 +141,7 @@ impl Room {
     pub fn create_player(&mut self, position: TilePoint) {
         self.create_actor(ActorType::Player, position);
         self.player_index = self.actors.len() - 1;
+        self.update_visible_and_explored();
     }
 
     fn clone_actor(&mut self, other_actor: &Actor) -> u32 {
@@ -332,6 +374,30 @@ impl Room {
         new_events
     }
 
+    fn update_visible_and_explored(&mut self) {
+        self.visible.clear();
+        const RADIUS: i32 = 8;
+        let player_pos = self.get_player().position;
+        for x in (player_pos.x - RADIUS)..=(player_pos.x + RADIUS) {
+            for y in (player_pos.y - RADIUS)..=(player_pos.y + RADIUS) {
+                let current = vec2(x, y);
+                if distance(player_pos, current) != RADIUS {
+                    // Only check tiles exactly on radius to make a circle
+                    continue;
+                }
+                for p in bresenham_line(player_pos, current).into_iter() {
+                    self.visible.insert(p);
+                    self.explored.insert(p);
+                    let cell_type = self.get_cell_type(p);
+                    match cell_type {
+                        CellType::OutOfBounds | CellType::DefaultWall | CellType::RoomExit => break,
+                        _ => (),
+                    };
+                }
+            }
+        }
+    }
+
     fn teleport_actor(&mut self, actor_index: usize, new_position: TilePoint) -> Vec<GameEvent> {
         let mut events = vec![];
         self.actors[actor_index].position = new_position;
@@ -341,6 +407,7 @@ impl Room {
                     item.position = new_position;
                 }
             }
+            self.update_visible_and_explored();
         }
         let entered_cell_type = self.cells[new_position.x as usize][new_position.y as usize].cell_type;
         if entered_cell_type == CellType::Water {

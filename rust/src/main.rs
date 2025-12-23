@@ -144,45 +144,62 @@ impl TerminalApp {
     }
 
     fn get_char_for_cell(&self, position: TilePoint) -> Span<'_> {
-        let mut actors = self.game.current_room.find_actors_at(position, true);
-        if actors.len() > 0 {
-            // Sort so alive actors are displayed above dead actors
-            actors.sort_by_key(|&index| self.game.current_room.actors[index].is_dead);
-            let actor_index = actors[0];
-            let actor = &self.game.current_room.actors[actor_index];
-            let mut c = match actor.actor_type {
-                ActorType::Player => "@".light_yellow().on_black(),
-                ActorType::Toad => "t".light_green().on_black(),
-                ActorType::MouseWarrior => "m".light_magenta().on_black(),
-                ActorType::ToothyStarling => "s".light_cyan().on_black(),
-                ActorType::DustySkeleton => "z".white().on_black(),
-                ActorType::BlueJelly => "j".light_blue().on_black(),
-            };
-            if actor.is_dead {
-                c = c.dark_gray();
-            } else if actor.current_hp <= (actor.max_hp as f32 / 4.0).round() as i32 {
-                c = c.red();
-            } else if actor.current_hp <= (actor.max_hp as f32 / 2.0).round() as i32 {
-                c = c.light_red();
-            }
-            return c;
+        let visible = self.game.current_room.visible.contains(&position);
+        let explored = self.game.current_room.explored.contains(&position);
+        if !visible && !explored {
+            return Span::from(" ");
         }
 
-        let items = self.game.current_room.find_loose_items_at(position);
-        if items.len() > 0 {
-            let item_index = items[0];
-            let item = &self.game.current_room.items[item_index];
-            return match item.item_type {
-                ItemType::LumpOfBlackstone => "*".gray().on_black(),
-                ItemType::BlackstoneSpear => "|".gray().on_black(),
-                ItemType::CarmineChainmail => "[".red().on_black(),
-                ItemType::Bloodflower => "%".light_red().on_black(),
-                ItemType::WandOfIce => "/".light_cyan().on_black(),
-            };
+        if visible {
+            let mut actors = self.game.current_room.find_actors_at(position, true);
+            if actors.len() > 0 {
+                // Sort so alive actors are displayed above dead actors
+                actors.sort_by_key(|&index| self.game.current_room.actors[index].is_dead);
+                let actor_index = actors[0];
+                let actor = &self.game.current_room.actors[actor_index];
+                let mut c = match actor.actor_type {
+                    ActorType::Player => "@".light_yellow().on_black(),
+                    ActorType::Toad => "t".light_green().on_black(),
+                    ActorType::MouseWarrior => "m".light_magenta().on_black(),
+                    ActorType::ToothyStarling => "s".light_cyan().on_black(),
+                    ActorType::DustySkeleton => "z".white().on_black(),
+                    ActorType::BlueJelly => "j".light_blue().on_black(),
+                };
+                if actor.is_dead {
+                    c = c.dark_gray();
+                } else if actor.current_hp <= (actor.max_hp as f32 / 4.0).round() as i32 {
+                    c = c.red();
+                } else if actor.current_hp <= (actor.max_hp as f32 / 2.0).round() as i32 {
+                    c = c.light_red();
+                }
+                return c;
+            }
+
+            let items = self.game.current_room.find_loose_items_at(position);
+            if items.len() > 0 {
+                let item_index = items[0];
+                let item = &self.game.current_room.items[item_index];
+                return match item.item_type {
+                    ItemType::LumpOfBlackstone => "*".gray().on_black(),
+                    ItemType::BlackstoneSpear => "|".gray().on_black(),
+                    ItemType::CarmineChainmail => "[".red().on_black(),
+                    ItemType::Bloodflower => "%".light_red().on_black(),
+                    ItemType::WandOfIce => "/".light_cyan().on_black(),
+                };
+            }
         }
 
         let display = display_for_cell_type(self.game.current_room.get_cell_type(position));
-        Span::styled(display.c.to_string(), Style::default().fg(display.fg_color).bg(display.bg_color))
+        let mut fg_color = display.fg_color;
+        let mut bg_color = display.bg_color;
+        if !visible {
+            if display.bg_color == Color::Black {
+                fg_color = Color::DarkGray;
+            } else {
+                bg_color = Color::DarkGray;
+            }
+        }
+        Span::styled(display.c.to_string(), Style::default().fg(fg_color).bg(bg_color))
     }
 
     fn build_type_table(&self) -> HashMap<u32, NamedType> {
