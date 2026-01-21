@@ -15,37 +15,33 @@ fn distance(p1: TilePoint, p2: TilePoint) -> i32 {
     return (p1.x - p2.x).abs() + (p1.y - p2.y).abs();
 }
 
-// https://rosettacode.org/wiki/Bitmap/Bresenham%27s_line_algorithm#Rust
-fn bresenham_line(p1: TilePoint, p2: TilePoint) -> Vec<TilePoint> {
-    let x1 = p1.x;
-    let y1 = p1.y;
-    let x2 = p2.x;
-    let y2 = p2.y;
-
+// Orthogonal line algorithm, very similar to Bresenham's but only moves in cardinal directions
+fn orthogonal_line(p1: TilePoint, p2: TilePoint) -> Vec<TilePoint> {
     let mut coordinates: Vec<TilePoint> = vec![];
 
-    let dx:i32 = i32::abs(x2 - x1);
-    let dy:i32 = i32::abs(y2 - y1);
-    let sx:i32 = { if x1 < x2 { 1 } else { -1 } };
-    let sy:i32 = { if y1 < y2 { 1 } else { -1 } };
+    let dx = (p2.x - p1.x).abs();
+    let dy = (p2.y - p1.y).abs();
+    let sx = if p1.x < p2.x { 1 } else { -1 };
+    let sy = if p1.y < p2.y { 1 } else { -1 };
 
-    let mut error:i32 = (if dx > dy  { dx } else { -dy }) / 2;
-    let mut current_x:i32 = x1;
-    let mut current_y:i32 = y1;
+    let mut current_x = p1.x;
+    let mut current_y = p1.y;
+    let mut error = dx - dy;
+
     loop {
         coordinates.push(vec2(current_x, current_y));
 
-        if current_x == x2 && current_y == y2 { break; }
-
-        let error2:i32 = error;
-
-        if error2 > -dx {
-            error -= dy;
-            current_x += sx;
+        if current_x == p2.x && current_y == p2.y {
+            break;
         }
-        if error2 < dy {
-            error += dx;
+
+        // Move only in one direction per step
+        if error > 0 {
+            current_x += sx;
+            error -= dy;
+        } else {
             current_y += sy;
+            error += dx;
         }
     }
 
@@ -376,16 +372,12 @@ impl Room {
 
     fn update_visible_and_explored(&mut self) {
         self.visible.clear();
-        const RADIUS: i32 = 8;
+
         let player_pos = self.get_player().position;
-        for x in (player_pos.x - RADIUS)..=(player_pos.x + RADIUS) {
-            for y in (player_pos.y - RADIUS)..=(player_pos.y + RADIUS) {
+        for x in 0..(self.size.x as i32) {
+            for y in 0..(self.size.y as i32) {
                 let current = vec2(x, y);
-                if distance(player_pos, current) != RADIUS {
-                    // Only check tiles exactly on radius to make a circle
-                    continue;
-                }
-                for p in bresenham_line(player_pos, current).into_iter() {
+                for p in orthogonal_line(player_pos, current).into_iter() {
                     self.visible.insert(p);
                     self.explored.insert(p);
                     let cell_type = self.get_cell_type(p);
