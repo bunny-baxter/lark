@@ -52,6 +52,13 @@ fn is_navigable(cell_type: CellType) -> bool {
     }
 }
 
+fn is_open(cell_type: CellType) -> bool {
+    match cell_type {
+        CellType::DefaultFloor | CellType::FloorMoss | CellType::FloorThyme => true,
+        _ => false,
+    }
+}
+
 fn floodfill_navigable_area_recursive_helper(room: &Vec<Vec<GeneratedCell>>, current: TilePoint, result: &mut HashSet<TilePoint>) {
     if !is_navigable(room[current.x as usize][current.y as usize].cell_type) {
         return;
@@ -138,6 +145,17 @@ fn find_edge_walls(size: TileSize, room: &Vec<Vec<GeneratedCell>>) -> Vec<TilePo
         }
         if adjacent_floors == 1 || adjacent_floors == 2 {
             result.push(point);
+        }
+    }}
+    result
+}
+
+fn collect_open_cells(size: TileSize, room: &Vec<Vec<GeneratedCell>>, player_start: TilePoint) -> Vec<TilePoint> {
+    let mut result = vec![];
+    for x in 0..size.x { for y in 0..size.y {
+        let p = vec2(x as i32, y as i32);
+        if p != player_start && is_open(room[x][y].cell_type) {
+            result.push(p);
         }
     }}
     result
@@ -239,10 +257,60 @@ pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerati
         room[exit.x as usize][exit.y as usize].cell_type = CellType::RoomExit;
     }
 
+    let player_start_i32 = vec2(player_start.x as i32, player_start.y as i32);
+    let mut open_cells: Vec<TilePoint> = collect_open_cells(config.size, &room, player_start_i32);
+
+    let monster_count = rng.random_range(5..=8);
+    let monster_types = [
+        ActorType::Toad,
+        ActorType::Toad,
+        ActorType::Toad,
+        ActorType::Toad,
+        ActorType::Toad,
+        ActorType::MouseWarrior,
+        ActorType::ToothyStarling,
+        ActorType::ToothyStarling,
+        ActorType::DustySkeleton,
+        ActorType::BlueJelly,
+        ActorType::BlueJelly,
+        ActorType::BlueJelly,
+    ];
+    for _ in 0..monster_count {
+        if open_cells.is_empty() {
+            break;
+        }
+        let i = rng.random_range(0..open_cells.len());
+        let pos = open_cells.swap_remove(i);
+        let monster_type = *monster_types.choose(&mut rng).unwrap();
+        room[pos.x as usize][pos.y as usize].monster = Some(monster_type);
+    }
+
+    let item_count = rng.random_range(2..=4);
+    let item_types = [
+        ItemType::LumpOfBlackstone,
+        ItemType::LumpOfBlackstone,
+        ItemType::BlackstoneSpear,
+        ItemType::CarmineChainmail,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::WandOfIce,
+    ];
+    for _ in 0..item_count {
+        if open_cells.is_empty() {
+            break;
+        }
+        let i = rng.random_range(0..open_cells.len());
+        let pos = open_cells.swap_remove(i);
+        let item_type = *item_types.choose(&mut rng).unwrap();
+        room[pos.x as usize][pos.y as usize].item = Some(item_type);
+    }
+
     GeneratedRoom {
         cells: room,
         exits,
-        player_start: vec2(player_start.x as i32, player_start.y as i32),
+        player_start: player_start_i32,
     }
 }
 

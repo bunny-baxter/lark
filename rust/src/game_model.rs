@@ -115,8 +115,15 @@ impl Room {
         let mut room = Self::new(config.size);
         let gen_result = generate::generate_room(player_start, config.clone());
         for x in 0..config.size.x { for y in 0..config.size.y {
+            let pos = vec2(x as i32, y as i32);
             let cell = &gen_result.cells[x][y];
-            room.set_cell(vec2(x as i32, y as i32), cell.cell_type);
+            room.set_cell(pos, cell.cell_type);
+            if let Some(monster_type) = cell.monster {
+                room.create_actor(monster_type, pos);
+            }
+            if let Some(item_type) = cell.item {
+                room.create_item(item_type, pos);
+            }
         }}
         for &exit in gen_result.exits.iter() {
             room.exits.insert(exit, config.clone());
