@@ -21,7 +21,6 @@ use ratatui::{
 
 use data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta};
 use game_model::{Command, GameInstance};
-use generate::RoomGenerationConfig;
 use strings::NamedType;
 use ui_common::ItemMenu;
 
@@ -67,19 +66,6 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_item(ItemType::BlackstoneSpear, vec2(8, 1));
     game.current_room.create_item(ItemType::CarmineChainmail, vec2(8, 2));
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
-    game.current_room.set_exit(vec2(2, 0), RoomGenerationConfig { size: vec2(11, 7) });
-}
-
-fn init_generated_level(game: &mut GameInstance) {
-    let room_size = game.current_room.size.clone();
-    let gen_result = generate::generate_room(RoomGenerationConfig { size: room_size });
-
-    for x in 0..room_size.x { for y in 0..room_size.y {
-        let cell = &gen_result.cells[x][y];
-        game.current_room.set_cell(vec2(x as i32, y as i32), cell.cell_type);
-    }}
-
-    game.current_room.create_player(gen_result.player_start);
 }
 
 fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, NamedType>) -> Vec<Line<'c>> {
@@ -120,7 +106,7 @@ pub struct TerminalApp {
 impl TerminalApp {
     fn new() -> Self {
         let mut game = GameInstance::new();
-        init_generated_level(&mut game);
+        game.create_first_room();
 
         TerminalApp {
             game,

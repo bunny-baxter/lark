@@ -25,7 +25,7 @@ const AUTOMATA_NEIGHBORS: &[(i32, i32)] = &[
     (1, 1),
 ];
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RoomGenerationConfig {
     pub size: TileSize,
 }
@@ -41,6 +41,7 @@ pub struct GeneratedCell {
 #[derive(Debug)]
 pub struct GeneratedRoom {
     pub cells: Vec<Vec<GeneratedCell>>,
+    pub exits: Vec<TilePoint>,
     pub player_start: TilePoint,
 }
 
@@ -118,14 +119,41 @@ fn connect_with_drunkards_walk(room: &mut Vec<Vec<GeneratedCell>>, current: Tile
     }
 }
 
-pub fn generate_room(config: RoomGenerationConfig) -> GeneratedRoom {
+fn find_edge_walls(size: TileSize, room: &Vec<Vec<GeneratedCell>>) -> Vec<TilePoint> {
+    let mut result = vec![];
+    for x in 0..size.x { for y in 0..size.y {
+        if room[x][y].cell_type != CellType::DefaultWall {
+            continue;
+        }
+        let point = vec2(x as i32, y as i32);
+        let mut adjacent_floors = 0;
+        for &d in NEIGHBORS.iter() {
+            let neighbor = vec2(point.x + d.0, point.y + d.1);
+            if neighbor.x < 0 || neighbor.y < 0 || neighbor.x as usize >= size.x || neighbor.y as usize >= size.y {
+                continue;
+            }
+            if is_navigable(room[neighbor.x as usize][neighbor.y as usize].cell_type) {
+                adjacent_floors += 1;
+            }
+        }
+        if adjacent_floors == 1 || adjacent_floors == 2 {
+            result.push(point);
+        }
+    }}
+    result
+}
+
+pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerationConfig) -> GeneratedRoom {
     let mut room = create_2d_vec::<GeneratedCell>(config.size);
     let mut rng = rand::rng();
 
     let inner_width_range = 1..(config.size.x - 1);
     let inner_height_range = 1..(config.size.y - 1);
 
-    let player_start = vec2(rng.random_range(inner_width_range.clone()), rng.random_range(inner_height_range.clone()));
+    let player_start = match maybe_player_start {
+        Some(player_start) => vec2(player_start.x as usize, player_start.y as usize),
+        None => vec2(rng.random_range(inner_width_range.clone()), rng.random_range(inner_height_range.clone())),
+    };
 
     // Initialize randomly
     for x in 0..config.size.x { for y in 0..config.size.y {
@@ -202,8 +230,18 @@ pub fn generate_room(config: RoomGenerationConfig) -> GeneratedRoom {
         }
     }
 
+    // Place exit(s)
+    let mut exits = vec![];
+    {
+        let exit_candidates = find_edge_walls(config.size, &room);
+        let exit = exit_candidates.choose(&mut rng).unwrap();
+        exits.push(*exit);
+        room[exit.x as usize][exit.y as usize].cell_type = CellType::RoomExit;
+    }
+
     GeneratedRoom {
         cells: room,
+        exits,
         player_start: vec2(player_start.x as i32, player_start.y as i32),
     }
 }

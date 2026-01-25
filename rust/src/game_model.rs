@@ -3,7 +3,7 @@ use std::collections:: {HashMap, HashSet};
 use cgmath::vec2;
 
 use crate::data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData};
-use crate::generate::RoomGenerationConfig;
+use crate::{generate, generate::RoomGenerationConfig};
 
 #[repr(C)]
 #[derive(Clone, Debug, Default)]
@@ -111,6 +111,22 @@ impl Room {
         }
     }
 
+    fn generate(player_start: Option<TilePoint>, config: RoomGenerationConfig) -> Self {
+        let mut room = Self::new(config.size);
+        let gen_result = generate::generate_room(player_start, config.clone());
+        for x in 0..config.size.x { for y in 0..config.size.y {
+            let cell = &gen_result.cells[x][y];
+            room.set_cell(vec2(x as i32, y as i32), cell.cell_type);
+        }}
+        for &exit in gen_result.exits.iter() {
+            room.exits.insert(exit, config.clone());
+        }
+        if player_start.is_none() {
+            room.create_player(gen_result.player_start);
+        } // else change_rooms needs to clone the existing player
+        room
+    }
+
     pub fn set_cell(&mut self, position: TilePoint, cell_type: CellType) {
         self.cells[position.x as usize][position.y as usize].cell_type = cell_type;
     }
@@ -198,11 +214,6 @@ impl Room {
             }
         }
         result
-    }
-
-    pub fn set_exit(&mut self, exit_position: TilePoint, next_room_config: RoomGenerationConfig) {
-        self.set_cell(exit_position, CellType::RoomExit);
-        self.exits.insert(exit_position, next_room_config);
     }
 
     pub fn get_player(&self) -> &Actor {
@@ -566,21 +577,32 @@ impl GameInstance {
     pub fn new() -> Self {
         GameInstance {
             turn: 0,
-            current_room: create_blank_room(vec2(19, 11)),
+            // This room should be unused, it just ensures the GameInstance is valid on creation
+            current_room: create_blank_room(vec2(4, 4)),
             event_log: vec![],
         }
     }
 
-    fn change_rooms(&mut self) {
-        let mut new_room = create_blank_room(vec2(11, 7));
-        let new_player_position = vec2(2, 1);
+    pub fn create_first_room(&mut self) {
+        self.current_room = Room::generate(None, RoomGenerationConfig { size: vec2(19, 11) });
+    }
+
+    fn change_rooms(&mut self, player_start: TilePoint) {
+        // player_start is for the next room, it may not be valid for the current room.
+        let player_pos = self.current_room.get_player().position;
+        let config = self.current_room.exits.get(&player_pos)
+            .expect("change_rooms called but player not on exit");
+
+        let mut new_room = Room::generate(Some(player_start), config.clone());
+
         new_room.clone_actor(self.current_room.get_player());
         let mut new_inventory = vec![];
         for &item_id in self.current_room.player_inventory.iter() {
             new_inventory.push(new_room.clone_item(self.current_room.get_item(item_id)));
         }
         new_room.player_inventory = new_inventory;
-        new_room.teleport_actor(new_room.player_index, new_player_position);
+        new_room.teleport_actor(new_room.player_index, player_start);
+
         self.current_room = new_room;
     }
 
@@ -588,11 +610,14 @@ impl GameInstance {
         let turn_ended = match command {
             Command::Wait => true,
             Command::Walk { delta } => {
+                let previous_pos = self.current_room.get_player().position;
                 let mut result = self.current_room.actor_walk(self.current_room.player_index, delta);
                 self.event_log.append(&mut result.events);
                 if result.succeeded {
                     if self.current_room.exits.contains_key(&self.current_room.get_player().position) {
-                        self.change_rooms();
+                        // Use the player's previous position as the next room start. Otherwise the
+                        // player could be on the room edge, which is never valid.
+                        self.change_rooms(previous_pos);
                     }
                 }
                 result.succeeded
