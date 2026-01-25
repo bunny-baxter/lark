@@ -584,8 +584,8 @@ impl GameInstance {
     pub fn new() -> Self {
         GameInstance {
             turn: 0,
-            // This room should be unused, it just ensures the GameInstance is valid on creation
-            current_room: create_blank_room(vec2(4, 4)),
+            // Placeholder room used only in tests
+            current_room: create_blank_room(vec2(8, 8)),
             event_log: vec![],
         }
     }
