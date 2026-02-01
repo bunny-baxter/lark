@@ -1,8 +1,9 @@
 use std::collections:: {HashMap, HashSet};
 
 use cgmath::vec2;
+use rand::Rng;
 
-use crate::data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData};
+use crate::data::{ActorType, CellType, ItemType, GameEvent, STEEL_THISTLE_CYCLE_MAX, TilePoint, TileDelta, TileSize, get_base_stats, get_item_data, ItemData, MiscEntityType};
 use crate::{generate, generate::RoomGenerationConfig};
 
 #[repr(C)]
@@ -72,12 +73,22 @@ pub struct Item {
     pub destroyed: bool,
 }
 
+#[derive(Clone, Debug)]
+pub struct MiscEntity {
+    #[allow(unused)]
+    pub id: u32,
+    pub entity_type: MiscEntityType,
+    pub position: TilePoint,
+    pub data: i32,
+}
+
 #[derive(Debug)]
 pub struct Room {
     pub size: TileSize,
     pub cells: Vec<Vec<Cell>>,
     pub actors: Vec<Actor>,
     pub items: Vec<Item>,
+    pub misc_entities: Vec<MiscEntity>,
     pub player_inventory: Vec<u32>,
     pub visible: HashSet<TilePoint>,
     pub explored: HashSet<TilePoint>,
@@ -102,6 +113,7 @@ impl Room {
             cells,
             actors: vec![],
             items: vec![],
+            misc_entities: vec![],
             player_inventory: vec![],
             visible: HashSet::new(),
             explored: HashSet::new(),
@@ -123,6 +135,9 @@ impl Room {
             }
             if let Some(item_type) = cell.item {
                 room.create_item(item_type, pos);
+            }
+            if let Some(entity_type) = cell.misc_entity {
+                room.create_misc_entity(entity_type, pos);
             }
         }}
         for &exit in gen_result.exits.iter() {
@@ -196,6 +211,33 @@ impl Room {
         self.items.push(new_item);
         self.next_id += 1;
         id
+    }
+
+    pub fn create_misc_entity(&mut self, entity_type: MiscEntityType, position: TilePoint) -> u32 {
+        let id = self.next_id;
+        let mut entity = MiscEntity {
+            id,
+            entity_type,
+            position,
+            data: 0,
+        };
+        if entity_type == MiscEntityType::SteelThistle {
+            let mut rng = rand::rng();
+            entity.data = rng.random_range(0..=STEEL_THISTLE_CYCLE_MAX);
+        }
+        self.misc_entities.push(entity);
+        self.next_id += 1;
+        id
+    }
+
+    pub fn find_misc_entities_at(&self, position: TilePoint) -> Vec<usize> {
+        let mut result = vec![];
+        for i in 0..self.misc_entities.len() {
+            if self.misc_entities[i].position == position {
+                result.push(i);
+            }
+        }
+        result
     }
 
     pub fn destroy_item(&mut self, item_id: u32) {
@@ -386,6 +428,33 @@ impl Room {
             },
         }
         new_events
+    }
+
+    fn update_misc_entity(&mut self, index: usize) -> Vec<GameEvent> {
+        let mut events = vec![];
+        match self.misc_entities[index].entity_type {
+            MiscEntityType::SteelThistle => {
+                self.misc_entities[index].data += 1;
+                if self.misc_entities[index].data > STEEL_THISTLE_CYCLE_MAX {
+                    self.misc_entities[index].data = 0;
+                }
+                match self.misc_entities[index].data {
+                    0..STEEL_THISTLE_CYCLE_MAX => (),
+                    STEEL_THISTLE_CYCLE_MAX => {
+                        // Strike actors
+                        for i in 0..self.actors.len() {
+                            if self.actors[i].position == self.misc_entities[index].position {
+                                self.modify_hp(i, -1);
+                                events.push(GameEvent::SteelThistleHit { actor_id: self.actors[i].id, damage: 1 });
+                            }
+                        }
+                    },
+                    _ => unreachable!(),
+                }
+            },
+            _ => (),
+        };
+        events
     }
 
     fn update_visible_and_explored(&mut self) {
@@ -673,6 +742,9 @@ impl GameInstance {
         if turn_ended {
             for i in 0..self.current_room.actors.len() {
                 self.event_log.append(&mut self.current_room.run_monster_turn(i));
+            }
+            for i in 0..self.current_room.misc_entities.len() {
+                self.event_log.append(&mut self.current_room.update_misc_entity(i));
             }
             self.turn += 1;
             if self.current_room.get_player().skip_next_turn {

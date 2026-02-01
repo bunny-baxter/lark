@@ -168,6 +168,15 @@ pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
     }
 }
 
+pub const STEEL_THISTLE_CYCLE_MAX: i32 = 4;
+
+#[allow(unused)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum MiscEntityType {
+    SteelThistle,
+    TreasureChest,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum GameEvent {
     Bonk { actor_id: u32 },
@@ -184,4 +193,5 @@ pub enum GameEvent {
     ActivatedItem { item_id: u32 },
     EffectIceDamage { actor_id: u32, damage: i32 },
     NoEffect { item_id: u32 },
+    SteelThistleHit { actor_id: u32, damage: i32 },
 }

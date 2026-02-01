@@ -4,7 +4,7 @@ use cgmath::vec2;
 use rand::prelude::IndexedRandom;
 use rand::Rng;
 
-use crate::data::{ActorType, CellType, ItemType, NEIGHBORS, TilePoint, TileSize};
+use crate::data::{ActorType, CellType, ItemType, MiscEntityType, NEIGHBORS, TilePoint, TileSize};
 
 fn create_2d_vec<T: Default + Clone>(size: TileSize) -> Vec<Vec<T>> {
     let mut result = Vec::with_capacity(size.x);
@@ -36,6 +36,7 @@ pub struct GeneratedCell {
     pub immutable: bool,
     pub monster: Option<ActorType>,
     pub item: Option<ItemType>,
+    pub misc_entity: Option<MiscEntityType>,
 }
 
 #[derive(Debug)]
@@ -305,6 +306,16 @@ pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerati
         let pos = open_cells.swap_remove(i);
         let item_type = *item_types.choose(&mut rng).unwrap();
         room[pos.x as usize][pos.y as usize].item = Some(item_type);
+    }
+
+    let thistle_count = rng.random_range(0..=12);
+    for _ in 0..thistle_count {
+        if open_cells.is_empty() {
+            break;
+        }
+        let i = rng.random_range(0..open_cells.len());
+        let pos = open_cells.swap_remove(i);
+        room[pos.x as usize][pos.y as usize].misc_entity = Some(MiscEntityType::SteelThistle);
     }
 
     GeneratedRoom {

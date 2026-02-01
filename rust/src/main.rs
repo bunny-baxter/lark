@@ -19,7 +19,7 @@ use ratatui::{
     DefaultTerminal, Frame,
 };
 
-use data::{ActorType, CellType, ItemType, GameEvent, TilePoint, TileDelta};
+use data::{ActorType, CellType, ItemType, MiscEntityType, GameEvent, STEEL_THISTLE_CYCLE_MAX, TilePoint, TileDelta};
 use game_model::{Command, GameInstance};
 use strings::NamedType;
 use ui_common::ItemMenu;
@@ -86,6 +86,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::ActivatedItem { .. } => Color::LightYellow,
             GameEvent::EffectIceDamage { .. } => Color::Red,
             GameEvent::NoEffect { .. } => Color::DarkGray,
+            GameEvent::SteelThistleHit { .. } => Color::Red,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -171,6 +172,22 @@ impl TerminalApp {
                     ItemType::CarmineChainmail => "[".red().on_black(),
                     ItemType::Bloodflower => "%".light_red().on_black(),
                     ItemType::WandOfIce => "/".light_cyan().on_black(),
+                };
+            }
+
+            let misc_entities = self.game.current_room.find_misc_entities_at(position);
+            if misc_entities.len() > 0 {
+                let entity_index = misc_entities[0];
+                let entity = &self.game.current_room.misc_entities[entity_index];
+                const STEEL_THISTLE_CYCLE_MAX_MINUS_1: i32 = STEEL_THISTLE_CYCLE_MAX - 1;
+                return match entity.entity_type {
+                    MiscEntityType::SteelThistle => match entity.data {
+                        0..STEEL_THISTLE_CYCLE_MAX_MINUS_1 => "+".white().on_black(),
+                        STEEL_THISTLE_CYCLE_MAX_MINUS_1 => "+".light_magenta().on_black(),
+                        STEEL_THISTLE_CYCLE_MAX => "%".light_magenta().on_black(),
+                        _ => unreachable!(),
+                    },
+                    MiscEntityType::TreasureChest => "=".yellow().on_black(),
                 };
             }
         }
