@@ -87,6 +87,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::EffectIceDamage { .. } => Color::Red,
             GameEvent::NoEffect { .. } => Color::DarkGray,
             GameEvent::SteelThistleHit { .. } => Color::Red,
+            GameEvent::ThrownStoneDamage { .. } => Color::Red,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -277,7 +278,7 @@ impl TerminalApp {
                 self.game.execute_command(Command::EatItem { item_id });
                 self.item_menu = None;
             },
-            KeyCode::Char('v') => if let Some(item_id) = self.get_selected_item_id() {
+            KeyCode::Char('v') | KeyCode::Char('t') => if let Some(item_id) = self.get_selected_item_id() {
                 self.direction_selection_item = Some(item_id);
                 self.item_menu = None;
             },

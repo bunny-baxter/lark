@@ -93,8 +93,11 @@ fn get_unequipped_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) 
     }
 }
 
-fn get_activated_past_verb(_item_id: u32, _type_table: &HashMap<u32, NamedType>) -> &'static str {
-    "invoked"
+fn get_activated_past_verb(item_id: u32, type_table: &HashMap<u32, NamedType>) -> &'static str {
+    match type_table.get(&item_id) {
+        Some(NamedType::ItemType { item_type: ItemType::LumpOfBlackstone }) => "threw",
+        _ => "invoked",
+    }
 }
 
 pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32, NamedType>) -> String {
@@ -116,5 +119,6 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::EffectIceDamage { actor_id, damage } => format!("\u{2744}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::NoEffect { item_id } => format!("{} has no effect", get_item_name(item_id, type_table)),
         GameEvent::SteelThistleHit { actor_id, damage } => format!("\u{2741}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::ThrownStoneDamage { actor_id, damage } => format!("\u{25cf}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
     }
 }

@@ -584,6 +584,16 @@ impl Room {
                 }
                 new_events
             },
+            ItemType::LumpOfBlackstone => {
+                let damage = 1;
+                self.modify_hp(actor_index, -damage);
+                let mut new_events = vec![];
+                new_events.push(GameEvent::ThrownStoneDamage { actor_id: self.actors[actor_index].id, damage });
+                if self.actors[actor_index].is_dead {
+                    new_events.push(GameEvent::Death { actor_id: self.actors[actor_index].id });
+                }
+                new_events
+            },
             _ => unreachable!(),
         }
     }
@@ -592,7 +602,8 @@ impl Room {
         assert_eq!(1, direction.x + direction.y);
         let mut events = vec![ GameEvent::ActivatedItem { item_id } ];
 
-        if self.get_item(item_id).item_type != ItemType::WandOfIce {
+        let item_type = self.get_item(item_id).item_type;
+        if item_type != ItemType::WandOfIce && item_type != ItemType::LumpOfBlackstone {
             events.push(GameEvent::NoEffect { item_id });
             return events;
         }

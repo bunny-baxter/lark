@@ -194,4 +194,5 @@ pub enum GameEvent {
     EffectIceDamage { actor_id: u32, damage: i32 },
     NoEffect { item_id: u32 },
     SteelThistleHit { actor_id: u32, damage: i32 },
+    ThrownStoneDamage { actor_id: u32, damage: i32 },
 }
