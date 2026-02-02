@@ -118,7 +118,7 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::ActivatedItem { item_id } => format!("{} {}", get_activated_past_verb(item_id, type_table), get_item_name(item_id, type_table)),
         GameEvent::EffectIceDamage { actor_id, damage } => format!("\u{2744}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::NoEffect { item_id } => format!("{} has no effect", get_item_name(item_id, type_table)),
-        GameEvent::SteelThistleHit { actor_id, damage } => format!("\u{2741}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::SteelThistleHit { actor_id, damage } => format!("\u{2740}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::ThrownStoneDamage { actor_id, damage } => format!("\u{25cf}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
     }
 }

@@ -442,10 +442,11 @@ impl Room {
                     0..STEEL_THISTLE_CYCLE_MAX => (),
                     STEEL_THISTLE_CYCLE_MAX => {
                         // Strike actors
-                        for i in 0..self.actors.len() {
-                            if self.actors[i].position == self.misc_entities[index].position {
-                                self.modify_hp(i, -1);
-                                events.push(GameEvent::SteelThistleHit { actor_id: self.actors[i].id, damage: 1 });
+                        for actor_index in self.find_actors_at(self.misc_entities[index].position, false) {
+                            self.modify_hp(actor_index, -1);
+                            events.push(GameEvent::SteelThistleHit { actor_id: self.actors[actor_index].id, damage: 1 });
+                            if self.actors[actor_index].is_dead {
+                                events.push(GameEvent::Death { actor_id: self.actors[actor_index].id });
                             }
                         }
                     },
