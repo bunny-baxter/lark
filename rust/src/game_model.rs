@@ -508,6 +508,10 @@ impl Room {
                 succeeded: false,
                 events: vec![],
             },
+            CellType::RoomExit if actor_index != self.player_index => return WalkResult {
+                succeeded: false,
+                events: vec![],
+            },
             _ => {},
         };
         if self.find_actors_at(next_position, false).len() > 0 {
