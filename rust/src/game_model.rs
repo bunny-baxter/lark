@@ -600,7 +600,7 @@ impl Room {
     }
 
     fn activate_item_by_direction(&mut self, item_id: u32, direction: TileDelta) -> Vec<GameEvent> {
-        assert_eq!(1, direction.x + direction.y);
+        assert_eq!(1, (direction.x + direction.y).abs());
         let mut events = vec![ GameEvent::ActivatedItem { item_id } ];
 
         let item_type = self.get_item(item_id).item_type;
