@@ -170,6 +170,11 @@ impl TerminalApp {
                 return match item.item_type {
                     ItemType::LumpOfBlackstone => "*".gray().on_black(),
                     ItemType::BlackstoneSpear => "|".gray().on_black(),
+                    ItemType::CarmineSword => "\\".red().on_black(),
+                    ItemType::MoonlightKnife => "-".white().on_black(),
+                    ItemType::BoneLamellar => "[".white().on_black(),
+                    ItemType::FeatheredCavalier => "^".yellow().on_black(),
+                    ItemType::CarmineHelm => "^".red().on_black(),
                     ItemType::CarmineChainmail => "[".red().on_black(),
                     ItemType::Bloodflower => "%".light_red().on_black(),
                     ItemType::WandOfIce => "/".light_cyan().on_black(),

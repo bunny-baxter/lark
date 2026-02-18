@@ -97,18 +97,19 @@ pub enum ItemType {
     //LumpOfWhitestone,
     BlackstoneSpear,
     //WhitestoneSpear,
-    //CarmineSword,
+    CarmineSword,
     //ViridianSword,
+    BoneLamellar,
     CarmineChainmail,
     //ViridianChainmail,
-    //CarmineHelm,
+    CarmineHelm,
     //ViridianHelm,
-    //FeatheredCavalier,
+    FeatheredCavalier,
     Bloodflower,
     //Azureberry,
     //Indigoberry,
     //PoulticeOfPurple,
-    //MoonlightKnife,
+    MoonlightKnife,
     //SunlightKnife,
     //ProwessRing,
     //VoidwalkingRing,
@@ -136,7 +137,7 @@ const LUMP_OF_BLACKSTONE_DATA: ItemData = ItemData {
 
 const BLACKSTONE_SPEAR_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
-    attack_bonus: Some(1),
+    attack_bonus: Some(2),
     defense_bonus: None,
 };
 
@@ -158,10 +159,45 @@ const WAND_OF_ICE_DATA: ItemData = ItemData {
     defense_bonus: None,
 };
 
+const CARMINE_SWORD_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Weapon,
+    attack_bonus: Some(3),
+    defense_bonus: None,
+};
+
+const MOONLIGHT_KNIFE_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Weapon,
+    attack_bonus: Some(1),
+    defense_bonus: None,
+};
+
+const BONE_LAMELLAR_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Torso,
+    attack_bonus: None,
+    defense_bonus: Some(1),
+};
+
+const FEATHERED_CAVALIER_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Headgear,
+    attack_bonus: None,
+    defense_bonus: Some(1),
+};
+
+const CARMINE_HELM_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Headgear,
+    attack_bonus: None,
+    defense_bonus: Some(2),
+};
+
 pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
     match item_type {
         ItemType::LumpOfBlackstone => &LUMP_OF_BLACKSTONE_DATA,
         ItemType::BlackstoneSpear => &BLACKSTONE_SPEAR_DATA,
+        ItemType::CarmineSword => &CARMINE_SWORD_DATA,
+        ItemType::MoonlightKnife => &MOONLIGHT_KNIFE_DATA,
+        ItemType::BoneLamellar => &BONE_LAMELLAR_DATA,
+        ItemType::FeatheredCavalier => &FEATHERED_CAVALIER_DATA,
+        ItemType::CarmineHelm => &CARMINE_HELM_DATA,
         ItemType::CarmineChainmail => &CARMINE_CHAINMAIL_DATA,
         ItemType::Bloodflower => &BLOODFLOWER_DATA,
         ItemType::WandOfIce => &WAND_OF_ICE_DATA,

@@ -26,6 +26,11 @@ pub fn item_type_to_name(item_type: ItemType) -> &'static str {
     match item_type {
         ItemType::LumpOfBlackstone => "lump of blackstone",
         ItemType::BlackstoneSpear => "blackstone spear",
+        ItemType::CarmineSword => "carmine sword",
+        ItemType::MoonlightKnife => "moonlight knife",
+        ItemType::BoneLamellar => "bone lamellar",
+        ItemType::FeatheredCavalier => "feathered cavalier",
+        ItemType::CarmineHelm => "carmine helm",
         ItemType::CarmineChainmail => "carmine chainmail",
         ItemType::Bloodflower => "bloodflower",
         ItemType::WandOfIce => "wand of ice",
