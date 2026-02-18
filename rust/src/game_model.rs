@@ -71,6 +71,7 @@ pub struct Item {
     carried: bool,
     pub equipped: bool,
     pub destroyed: bool,
+    pub wand_charges: Option<i32>,
 }
 
 #[derive(Clone, Debug)]
@@ -199,6 +200,7 @@ impl Room {
             carried: false,
             equipped: false,
             destroyed: false,
+            wand_charges: get_item_data(item_type).initial_wand_charges,
         });
         self.next_id += 1;
         id
@@ -623,7 +625,18 @@ impl Room {
                 _ => {},
             }
         }
-        self.destroy_item(item_id);
+        let charges = self.get_item(item_id).wand_charges;
+        if let Some(charges) = charges {
+            let new_charges = charges - 1;
+            if new_charges == 0 {
+                self.destroy_item(item_id);
+                events.push(GameEvent::WandExpended { item_id });
+            } else {
+                self.get_item_mut(item_id).wand_charges = Some(new_charges);
+            }
+        } else {
+            self.destroy_item(item_id);
+        }
 
         events
     }
@@ -1079,6 +1092,47 @@ mod tests {
             GameEvent::ActivatedItem { item_id },
             GameEvent::EffectIceDamage { actor_id: monster_id, damage: 4 },
             GameEvent::Death { actor_id: monster_id },
+        ], game.event_log);
+    }
+
+    #[test]
+    fn test_wand_charges_decrement() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.create_item(ItemType::WandOfIce, vec2(1, 1))
+        };
+        assert_eq!(Some(4), game.current_room.get_item(item_id).wand_charges);
+
+        game.execute_command(Command::GetItem { item_id });
+        game.execute_command(Command::ActivateItemByDirection { item_id, direction: vec2(-1, 0) });
+        assert_eq!(Some(3), game.current_room.get_item(item_id).wand_charges);
+        assert!(!game.current_room.get_item(item_id).destroyed);
+        assert_eq!(vec![item_id], game.current_room.player_inventory);
+    }
+
+    #[test]
+    fn test_wand_expended() {
+        let mut game = GameInstance::new();
+        let item_id = {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.create_item(ItemType::WandOfIce, vec2(1, 1))
+        };
+        game.execute_command(Command::GetItem { item_id });
+        for _ in 0..4 {
+            game.execute_command(Command::ActivateItemByDirection { item_id, direction: vec2(-1, 0) });
+        }
+        assert!(game.current_room.get_item(item_id).destroyed);
+        assert_eq!(0, game.current_room.player_inventory.len());
+        assert_eq!(vec![
+            GameEvent::GotItem { item_id },
+            GameEvent::ActivatedItem { item_id },
+            GameEvent::ActivatedItem { item_id },
+            GameEvent::ActivatedItem { item_id },
+            GameEvent::ActivatedItem { item_id },
+            GameEvent::WandExpended { item_id },
         ], game.event_log);
     }
 
