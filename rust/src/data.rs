@@ -32,6 +32,7 @@ pub enum ActorType {
     Player,
     Toad,
     MouseWarrior,
+    MouseSkirmisher,
     ToothyStarling,
     DustySkeleton,
     BlueJelly,
@@ -61,6 +62,12 @@ const MOUSE_WARRIOR_STATS: ActorBaseStats = ActorBaseStats {
     defense_power: 1,
 };
 
+const MOUSE_SKIRMISHER_STATS: ActorBaseStats = ActorBaseStats {
+    max_hp: 5,
+    attack_power: 1,
+    defense_power: 0,
+};
+
 const TOOTHY_STARLING_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 6,
     attack_power: 2,
@@ -84,6 +91,7 @@ pub fn get_base_stats(actor_type: ActorType) -> &'static ActorBaseStats {
         ActorType::Player => &PLAYER_STATS,
         ActorType::Toad => &TOAD_STATS,
         ActorType::MouseWarrior => &MOUSE_WARRIOR_STATS,
+        ActorType::MouseSkirmisher => &MOUSE_SKIRMISHER_STATS,
         ActorType::ToothyStarling => &TOOTHY_STARLING_STATS,
         ActorType::DustySkeleton => &DUSTY_SKELETON_STATS,
         ActorType::BlueJelly => &BLUE_JELLY_STATS,
@@ -242,5 +250,6 @@ pub enum GameEvent {
     NoEffect { item_id: u32 },
     SteelThistleHit { actor_id: u32, damage: i32 },
     ThrownStoneDamage { actor_id: u32, damage: i32 },
+    JavelinDamage { actor_id: u32, damage: i32 },
     WandExpended { item_id: u32 },
 }

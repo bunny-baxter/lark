@@ -88,6 +88,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::NoEffect { .. } => Color::DarkGray,
             GameEvent::SteelThistleHit { .. } => Color::Red,
             GameEvent::ThrownStoneDamage { .. } => Color::Red,
+            GameEvent::JavelinDamage { .. } => Color::Red,
             GameEvent::WandExpended { .. } => Color::DarkGray,
         };
         let parts = vec![
@@ -150,6 +151,7 @@ impl TerminalApp {
                     ActorType::Player => "@".light_yellow().on_black(),
                     ActorType::Toad => "t".light_green().on_black(),
                     ActorType::MouseWarrior => "m".light_magenta().on_black(),
+                    ActorType::MouseSkirmisher => "m".magenta().on_black(),
                     ActorType::ToothyStarling => "s".light_cyan().on_black(),
                     ActorType::DustySkeleton => "z".white().on_black(),
                     ActorType::BlueJelly => "j".light_blue().on_black(),

@@ -330,6 +330,30 @@ impl Room {
         new_events
     }
 
+    fn ai_walk_towards_player(&mut self, monster_index: usize) {
+        let actor_pos = self.actors[monster_index].position;
+        let player_pos = self.get_player().position;
+        let dx = player_pos.x - actor_pos.x;
+        let dy = player_pos.y - actor_pos.y;
+        let walk_x = vec2(dx.signum(), 0);
+        let can_walk_x = self.can_actor_walk(monster_index, walk_x);
+        let walk_y = vec2(0, dy.signum());
+        let can_walk_y = self.can_actor_walk(monster_index, walk_y);
+        let delta = if can_walk_x && can_walk_y {
+            if dx.abs() > dy.abs() { walk_x } else { walk_y }
+        } else if can_walk_x {
+            walk_x
+        } else if can_walk_y {
+            walk_y
+        } else {
+            // Neither move possible
+            vec2(0, 0)
+        };
+        if delta.x != 0 || delta.y != 0 {
+            self.actor_walk(monster_index, delta);
+        }
+    }
+
     fn run_monster_turn(&mut self, index: usize) -> Vec<GameEvent> {
         if index == self.player_index {
             return vec![];
@@ -398,15 +422,47 @@ impl Room {
                     if  distance_to_player == 1 {
                         new_events.append(&mut self.melee_attack(index, self.player_index));
                     } else {
-                        let dx = player_pos.x - actor_pos.x;
-                        let dy = player_pos.y - actor_pos.y;
-                        let delta = if dx.abs() > dy.abs() {
-                            vec2(dx.signum(), 0)
-                        } else {
-                            vec2(0, dy.signum())
-                        };
-                        self.actor_walk(index, delta);
+                        self.ai_walk_towards_player(index);
                     }
+                }
+            },
+            ActorType::MouseSkirmisher => {
+                let actor_pos = self.actors[index].position;
+                let player_pos = self.get_player().position;
+                let distance_to_player = distance(player_pos, actor_pos);
+                if distance_to_player == 1 {
+                    new_events.append(&mut self.melee_attack(index, self.player_index));
+                } else if self.actors[index].ai_data == 0 && (actor_pos.x == player_pos.x || actor_pos.y == player_pos.y) {
+                    self.actors[index].ai_data = 1;
+                    let direction = if actor_pos.x == player_pos.x {
+                        vec2(0, (player_pos.y - actor_pos.y).signum())
+                    } else {
+                        vec2((player_pos.x - actor_pos.x).signum(), 0)
+                    };
+                    // TODO: This is duplicated with activate_item_by_direction
+                    let mut current_pos = actor_pos;
+                    loop {
+                        current_pos += direction;
+                        let hit_actors = self.find_actors_at(current_pos, false);
+                        if !hit_actors.is_empty() {
+                            let hit_index = hit_actors[0];
+                            let hit_actor_id = self.actors[hit_index].id;
+                            let damage = 2;
+                            self.modify_hp(hit_index, -damage);
+                            new_events.push(GameEvent::JavelinDamage { actor_id: hit_actor_id, damage });
+                            if self.actors[hit_index].is_dead {
+                                new_events.push(GameEvent::Death { actor_id: hit_actor_id });
+                            }
+                            break;
+                        }
+                        let cell_type = self.get_cell_type(current_pos);
+                        match cell_type {
+                            CellType::DefaultWall | CellType::OutOfBounds => break,
+                            _ => {},
+                        }
+                    }
+                } else {
+                    self.ai_walk_towards_player(index);
                 }
             },
             ActorType::DustySkeleton => {
@@ -497,6 +553,20 @@ impl Room {
             events.push(GameEvent::SlowedByWater { actor_id: self.actors[actor_index].id });
         }
         events
+    }
+
+    fn can_actor_walk(&self, actor_index: usize, delta: TileDelta) -> bool {
+        // TODO: This logic is duplicated with actor_walk.
+        let next_position = self.actors[actor_index].position + delta;
+        let next_cell_type = self.get_cell_type(next_position);
+        match next_cell_type {
+            CellType::DefaultWall | CellType::OutOfBounds => return false,
+            _ => {},
+        };
+        if self.find_actors_at(next_position, false).len() > 0 {
+            return false;
+        }
+        true
     }
 
     fn actor_walk(&mut self, actor_index: usize, delta: TileDelta) -> WalkResult {
