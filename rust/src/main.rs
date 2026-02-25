@@ -362,7 +362,19 @@ impl TerminalApp {
         Paragraph::new(map_text)
             .centered()
             .block(map_block)
-            .render(Rect::new(0, 0, 64, 18), buf);
+            .render(Rect::new(0, 0, 48, 18), buf);
+
+        let side_hud_block = Block::new()
+            .padding(Padding::symmetric(2, 1));
+        let player_ref = self.game.current_room.get_player();
+        let side_hud_lines = vec![
+            Line::from(format!("Health {}/{}", player_ref.current_hp, player_ref.max_hp)),
+            Line::from(format!("Attack {}", player_ref.attack_power)),
+            Line::from(format!("Defense {}", player_ref.defense_power)),
+        ];
+        Paragraph::new(Text::from(side_hud_lines))
+            .block(side_hud_block)
+            .render(Rect::new(48, 0, 16, 18), buf);
     }
 
     fn render_item_menu(&self, buf: &mut Buffer, type_table: &HashMap<u32, NamedType>) {
