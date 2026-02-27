@@ -96,6 +96,7 @@ pub struct Room {
     pub exits: HashMap<TilePoint, RoomGenerationConfig>,
     pub next_id: u32,
     pub player_index: usize,
+    pub deterministic: bool,
 }
 
 struct WalkResult {
@@ -121,6 +122,7 @@ impl Room {
             exits: HashMap::new(),
             next_id: 0,
             player_index: 0,
+            deterministic: false,
         }
     }
 
@@ -315,7 +317,16 @@ impl Room {
     }
 
     fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> Vec<GameEvent> {
-        let damage = (self.actors[attacker_index].attack_power - self.actors[defender_index].defense_power).max(0);
+        let attack_power = self.actors[attacker_index].attack_power;
+        let min_roll = (attack_power as f64 / 3.0).ceil() as i32;
+        let max_roll = (attack_power as f64 * 1.25).ceil() as i32;
+        let raw_damage = if self.deterministic {
+            max_roll
+        } else {
+            let mut rng = rand::rng();
+            rng.random_range(min_roll..=max_roll)
+        };
+        let damage = (raw_damage - self.actors[defender_index].defense_power).max(0);
         self.modify_hp(defender_index, -damage);
         let mut new_events = vec![
             GameEvent::MeleeAttack {
@@ -749,7 +760,11 @@ impl GameInstance {
         GameInstance {
             turn: 0,
             // Placeholder room used only in tests
-            current_room: create_blank_room(vec2(8, 8)),
+            current_room: {
+                let mut room = create_blank_room(vec2(8, 8));
+                room.deterministic = true;
+                room
+            },
             event_log: vec![],
         }
     }
@@ -934,8 +949,8 @@ mod tests {
         assert!(game.current_room.get_player().current_hp < player_max_hp);
         assert!(game.current_room.get_actor(monster_id).current_hp < monster_max_hp);
         assert_eq!(vec![
-            GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 1 },
-            GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 1 },
+            GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 2 },
+            GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 2 },
         ], game.event_log);
     }
 
