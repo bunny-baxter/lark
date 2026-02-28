@@ -5,6 +5,7 @@ mod strings;
 mod ui_common;
 
 use std::collections::HashMap;
+use std::env;
 
 use color_eyre::Result;
 use cgmath::vec2;
@@ -57,15 +58,13 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.set_cell(vec2(3, 6), CellType::FloorMoss);
 
     game.current_room.create_player(vec2(2, 1));
-    game.current_room.create_actor(ActorType::ToothyStarling, vec2(4, 4));
-    game.current_room.create_actor(ActorType::BlueJelly, vec2(8, 5));
-    game.current_room.create_actor(ActorType::BlueJelly, vec2(8, 7));
-    game.current_room.create_actor(ActorType::DustySkeleton, vec2(11, 7));
-    game.current_room.create_item(ItemType::LumpOfBlackstone, vec2(4, 1));
-    game.current_room.create_item(ItemType::WandOfIce, vec2(3, 1));
-    game.current_room.create_item(ItemType::BlackstoneSpear, vec2(8, 1));
-    game.current_room.create_item(ItemType::CarmineChainmail, vec2(8, 2));
+    game.current_room.create_item(ItemType::FeatheredCavalier, vec2(1, 2));
+    game.current_room.create_item(ItemType::CarmineHelm, vec2(2, 2));
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
+    game.current_room.create_item(ItemType::Bloodflower, vec2(2, 3));
+    game.current_room.create_item(ItemType::Bloodflower, vec2(3, 3));
+    game.current_room.create_item(ItemType::Bloodflower, vec2(4, 3));
+    game.current_room.create_item(ItemType::Bloodflower, vec2(5, 3));
 }
 
 fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, NamedType>) -> Vec<Line<'c>> {
@@ -108,9 +107,13 @@ pub struct TerminalApp {
 }
 
 impl TerminalApp {
-    fn new() -> Self {
+    fn new(use_test_level: bool) -> Self {
         let mut game = GameInstance::new();
-        game.create_first_room();
+        if use_test_level {
+            init_test_level(&mut game);
+        } else {
+            game.create_first_room();
+        }
 
         TerminalApp {
             game,
@@ -452,7 +455,8 @@ impl Widget for &TerminalApp {
 
 fn main() -> Result<()> {
     color_eyre::install()?;
-    let mut app = TerminalApp::new();
+    let use_test_level = env::args().any(|arg| arg == "--test-level");
+    let mut app = TerminalApp::new(use_test_level);
     let mut terminal = ratatui::init();
     let app_result = app.run(&mut terminal);
     ratatui::restore();
