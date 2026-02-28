@@ -135,6 +135,7 @@ pub struct ItemData {
     pub equip_slot: EquipSlot,
     pub attack_bonus: Option<i32>,
     pub defense_bonus: Option<i32>,
+    pub max_hp_bonus: Option<i32>,
     pub initial_wand_charges: Option<i32>,
 }
 
@@ -142,6 +143,7 @@ const LUMP_OF_BLACKSTONE_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
     attack_bonus: None,
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -149,6 +151,7 @@ const BLACKSTONE_SPEAR_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
     attack_bonus: Some(2),
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -156,6 +159,7 @@ const CARMINE_CHAINMAIL_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Torso,
     attack_bonus: None,
     defense_bonus: Some(2),
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -163,6 +167,7 @@ const BLOODFLOWER_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Headgear,
     attack_bonus: None,
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -170,6 +175,7 @@ const WAND_OF_ICE_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
     attack_bonus: None,
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: Some(4),
 };
 
@@ -177,6 +183,7 @@ const CARMINE_SWORD_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
     attack_bonus: Some(3),
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -184,6 +191,7 @@ const MOONLIGHT_KNIFE_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
     attack_bonus: Some(1),
     defense_bonus: None,
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
@@ -191,20 +199,23 @@ const BONE_LAMELLAR_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Torso,
     attack_bonus: None,
     defense_bonus: Some(1),
+    max_hp_bonus: None,
     initial_wand_charges: None,
 };
 
 const FEATHERED_CAVALIER_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Headgear,
     attack_bonus: None,
-    defense_bonus: Some(1),
+    defense_bonus: None,
+    max_hp_bonus: Some(4),
     initial_wand_charges: None,
 };
 
 const CARMINE_HELM_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Headgear,
     attack_bonus: None,
-    defense_bonus: Some(2),
+    defense_bonus: None,
+    max_hp_bonus: Some(8),
     initial_wand_charges: None,
 };
 

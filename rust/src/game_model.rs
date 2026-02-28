@@ -641,6 +641,9 @@ impl Room {
         if let Some(defense_bonus) = item_data.defense_bonus {
             self.get_player_mut().defense_power += defense_bonus;
         }
+        if let Some(max_hp_bonus) = item_data.max_hp_bonus {
+            self.get_player_mut().max_hp += max_hp_bonus;
+        }
 
         events.push(GameEvent::EquippedItem { item_id });
         events
@@ -654,6 +657,13 @@ impl Room {
         }
         if let Some(defense_bonus) = item_data.defense_bonus {
             self.get_player_mut().defense_power -= defense_bonus;
+        }
+        if let Some(max_hp_bonus) = item_data.max_hp_bonus {
+            let player = self.get_player_mut();
+            player.max_hp -= max_hp_bonus;
+            if player.current_hp > player.max_hp {
+                player.current_hp = player.max_hp;
+            }
         }
         GameEvent::UnequippedItem { item_id }
     }
