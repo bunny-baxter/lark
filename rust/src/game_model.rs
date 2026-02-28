@@ -49,6 +49,28 @@ fn orthogonal_line(p1: TilePoint, p2: TilePoint) -> Vec<TilePoint> {
     coordinates
 }
 
+fn roll_physical_damage(power: i32, deterministic: bool) -> i32 {
+    let min_roll = (power as f64 / 3.0).ceil() as i32;
+    let max_roll = (power as f64 * 1.25).ceil() as i32;
+    if deterministic {
+        max_roll
+    } else {
+        let mut rng = rand::rng();
+        rng.random_range(min_roll..=max_roll)
+    }
+}
+
+fn roll_magical_damage(power: i32, deterministic: bool) -> i32 {
+    let min_roll = (power as f64 / 2.0).ceil() as i32;
+    let max_roll = (power as f64 * 1.5).ceil() as i32;
+    if deterministic {
+        max_roll
+    } else {
+        let mut rng = rand::rng();
+        rng.random_range(min_roll..=max_roll)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Actor {
     pub id: u32,
@@ -318,15 +340,8 @@ impl Room {
 
     fn melee_attack(&mut self, attacker_index: usize, defender_index: usize) -> Vec<GameEvent> {
         let attack_power = self.actors[attacker_index].attack_power;
-        let min_roll = (attack_power as f64 / 3.0).ceil() as i32;
-        let max_roll = (attack_power as f64 * 1.25).ceil() as i32;
-        let raw_damage = if self.deterministic {
-            max_roll
-        } else {
-            let mut rng = rand::rng();
-            rng.random_range(min_roll..=max_roll)
-        };
-        let damage = (raw_damage - self.actors[defender_index].defense_power).max(0);
+        let incoming_damage = roll_physical_damage(attack_power, self.deterministic);
+        let damage = (incoming_damage - self.actors[defender_index].defense_power).max(0);
         self.modify_hp(defender_index, -damage);
         let mut new_events = vec![
             GameEvent::MeleeAttack {
@@ -458,7 +473,7 @@ impl Room {
                         if !hit_actors.is_empty() {
                             let hit_index = hit_actors[0];
                             let hit_actor_id = self.actors[hit_index].id;
-                            let damage = 2;
+                            let damage = roll_physical_damage(3, self.deterministic);
                             self.modify_hp(hit_index, -damage);
                             new_events.push(GameEvent::JavelinDamage { actor_id: hit_actor_id, damage });
                             if self.actors[hit_index].is_dead {
@@ -659,7 +674,7 @@ impl Room {
     fn apply_item_to_actor(&mut self, item_id: u32, actor_index: usize) -> Vec<GameEvent> {
         match self.get_item(item_id).item_type {
             ItemType::WandOfIce => {
-                let damage = 4;
+                let damage = roll_magical_damage(5, self.deterministic);
                 self.modify_hp(actor_index, -damage);
                 let mut new_events = vec![];
                 new_events.push(GameEvent::EffectIceDamage { actor_id: self.actors[actor_index].id, damage });
@@ -669,7 +684,7 @@ impl Room {
                 new_events
             },
             ItemType::LumpOfBlackstone => {
-                let damage = 1;
+                let damage = roll_physical_damage(1, self.deterministic);
                 self.modify_hp(actor_index, -damage);
                 let mut new_events = vec![];
                 new_events.push(GameEvent::ThrownStoneDamage { actor_id: self.actors[actor_index].id, damage });
@@ -1175,7 +1190,7 @@ mod tests {
         assert_eq!(vec![
             GameEvent::GotItem { item_id },
             GameEvent::ActivatedItem { item_id },
-            GameEvent::EffectIceDamage { actor_id: monster_id, damage: 4 },
+            GameEvent::EffectIceDamage { actor_id: monster_id, damage: 8 },
             GameEvent::Death { actor_id: monster_id },
         ], game.event_log);
     }
