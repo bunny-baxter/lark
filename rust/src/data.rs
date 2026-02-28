@@ -45,44 +45,44 @@ pub struct ActorBaseStats {
 }
 
 const PLAYER_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 10,
+    max_hp: 24,
     attack_power: 1,
     defense_power: 0,
 };
 
 const TOAD_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 4,
-    attack_power: 1,
+    attack_power: 2,
     defense_power: 0,
 };
 
 const MOUSE_WARRIOR_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 8,
+    max_hp: 14,
+    attack_power: 5,
+    defense_power: 2,
+};
+
+const MOUSE_SKIRMISHER_STATS: ActorBaseStats = ActorBaseStats {
+    max_hp: 10,
     attack_power: 3,
     defense_power: 1,
 };
 
-const MOUSE_SKIRMISHER_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 5,
-    attack_power: 1,
-    defense_power: 0,
-};
-
 const TOOTHY_STARLING_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 6,
-    attack_power: 2,
+    max_hp: 8,
+    attack_power: 3,
     defense_power: 0,
 };
 
 const DUSTY_SKELETON_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 5,
-    attack_power: 2,
+    max_hp: 9,
+    attack_power: 4,
     defense_power: 1,
 };
 
 const BLUE_JELLY_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 6,
-    attack_power: 1,
+    attack_power: 3,
     defense_power: 0,
 };
 
