@@ -795,7 +795,7 @@ impl GameInstance {
     }
 
     pub fn create_first_room(&mut self) {
-        self.current_room = Room::generate(None, RoomGenerationConfig { size: vec2(19, 11) });
+        self.current_room = Room::generate(None, RoomGenerationConfig { depth: 0, size: vec2(19, 11) });
     }
 
     fn change_rooms(&mut self, player_start: TilePoint) {
@@ -804,7 +804,9 @@ impl GameInstance {
         let config = self.current_room.exits.get(&player_pos)
             .expect("change_rooms called but player not on exit");
 
-        let mut new_room = Room::generate(Some(player_start), config.clone());
+        let mut config = config.clone();
+        config.depth += 1;
+        let mut new_room = Room::generate(Some(player_start), config);
 
         new_room.clone_actor(self.current_room.get_player());
         let mut new_inventory = vec![];

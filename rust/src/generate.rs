@@ -27,6 +27,7 @@ const AUTOMATA_NEIGHBORS: &[(i32, i32)] = &[
 
 #[derive(Clone, Debug)]
 pub struct RoomGenerationConfig {
+    pub depth: i32,
     pub size: TileSize,
 }
 
@@ -162,6 +163,135 @@ fn collect_open_cells(size: TileSize, room: &Vec<Vec<GeneratedCell>>, player_sta
     result
 }
 
+fn roll_monsters(depth: i32) -> Vec<ActorType> {
+    let mut rng = rand::rng();
+
+    let monster_count_range = match depth {
+        0..=1 => 3..=5,
+        2 => 4..=6,
+        3..=5 => 5..=8,
+        _ => 6..=10,
+    };
+    let monster_count = rng.random_range(monster_count_range);
+
+    let monster_table = match depth {
+        0..=1 => vec![
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::MouseSkirmisher,
+        ],
+        2..=3 => vec![
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::DustySkeleton,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+        ],
+        4..=9 => vec![
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::MouseWarrior,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::DustySkeleton,
+            ActorType::DustySkeleton,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+        ],
+        _ => vec![
+            ActorType::Toad,
+            ActorType::Toad,
+            ActorType::MouseWarrior,
+            ActorType::MouseWarrior,
+            ActorType::MouseWarrior,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::MouseSkirmisher,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::ToothyStarling,
+            ActorType::DustySkeleton,
+            ActorType::DustySkeleton,
+            ActorType::DustySkeleton,
+            ActorType::BlueJelly,
+            ActorType::BlueJelly,
+        ],
+    };
+
+    let mut result = vec![];
+    for _ in 0..monster_count {
+        let monster_type = *monster_table.choose(&mut rng).unwrap();
+        result.push(monster_type);
+    }
+    result
+}
+
+fn roll_treasure(depth: i32) -> Vec<ItemType> {
+    let mut rng = rand::rng();
+
+    let item_count_range = match depth {
+        0..=1 => 2..=4,
+        _ => 3..=5,
+    };
+    let item_count = rng.random_range(item_count_range);
+    let item_table = [
+        ItemType::LumpOfBlackstone,
+        ItemType::LumpOfBlackstone,
+        ItemType::LumpOfBlackstone,
+        ItemType::MoonlightKnife,
+        ItemType::MoonlightKnife,
+        ItemType::MoonlightKnife,
+        ItemType::BlackstoneSpear,
+        ItemType::BlackstoneSpear,
+        ItemType::CarmineSword,
+        ItemType::BoneLamellar,
+        ItemType::BoneLamellar,
+        ItemType::CarmineChainmail,
+        ItemType::FeatheredCavalier,
+        ItemType::FeatheredCavalier,
+        ItemType::CarmineHelm,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::Bloodflower,
+        ItemType::WandOfIce,
+        ItemType::WandOfIce,
+        ItemType::WandOfIce,
+    ];
+
+    let mut result = vec![];
+    for _ in 0..item_count {
+        let item_type = *item_table.choose(&mut rng).unwrap();
+        result.push(item_type);
+    }
+    result
+}
+
 pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerationConfig) -> GeneratedRoom {
     let mut room = create_2d_vec::<GeneratedCell>(config.size);
     let mut rng = rand::rng();
@@ -261,74 +391,32 @@ pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerati
     let player_start_i32 = vec2(player_start.x as i32, player_start.y as i32);
     let mut open_cells: Vec<TilePoint> = collect_open_cells(config.size, &room, player_start_i32);
 
-    let monster_count = rng.random_range(5..=8);
-    let monster_types = [
-        ActorType::Toad,
-        ActorType::Toad,
-        ActorType::Toad,
-        ActorType::Toad,
-        ActorType::Toad,
-        ActorType::MouseWarrior,
-        ActorType::MouseSkirmisher,
-        ActorType::MouseSkirmisher,
-        ActorType::MouseSkirmisher,
-        ActorType::ToothyStarling,
-        ActorType::ToothyStarling,
-        ActorType::ToothyStarling,
-        ActorType::DustySkeleton,
-        ActorType::BlueJelly,
-        ActorType::BlueJelly,
-        ActorType::BlueJelly,
-        ActorType::BlueJelly,
-    ];
-    for _ in 0..monster_count {
+    let monster_types = roll_monsters(config.depth);
+    for monster_type in monster_types.into_iter() {
         if open_cells.is_empty() {
             break;
         }
         let i = rng.random_range(0..open_cells.len());
         let pos = open_cells.swap_remove(i);
-        let monster_type = *monster_types.choose(&mut rng).unwrap();
         room[pos.x as usize][pos.y as usize].monster = Some(monster_type);
     }
 
-    let item_count = rng.random_range(2..=4);
-    let item_types = [
-        ItemType::LumpOfBlackstone,
-        ItemType::LumpOfBlackstone,
-        ItemType::MoonlightKnife,
-        ItemType::MoonlightKnife,
-        ItemType::BlackstoneSpear,
-        ItemType::BlackstoneSpear,
-        ItemType::CarmineSword,
-        ItemType::BoneLamellar,
-        ItemType::BoneLamellar,
-        ItemType::BoneLamellar,
-        ItemType::CarmineChainmail,
-        ItemType::FeatheredCavalier,
-        ItemType::FeatheredCavalier,
-        ItemType::FeatheredCavalier,
-        ItemType::CarmineHelm,
-        ItemType::Bloodflower,
-        ItemType::Bloodflower,
-        ItemType::Bloodflower,
-        ItemType::Bloodflower,
-        ItemType::Bloodflower,
-        ItemType::Bloodflower,
-        ItemType::WandOfIce,
-        ItemType::WandOfIce,
-        ItemType::WandOfIce,
-    ];
-    for _ in 0..item_count {
+    let treasure = roll_treasure(config.depth);
+    for item_type in treasure.into_iter() {
         if open_cells.is_empty() {
             break;
         }
         let i = rng.random_range(0..open_cells.len());
         let pos = open_cells.swap_remove(i);
-        let item_type = *item_types.choose(&mut rng).unwrap();
         room[pos.x as usize][pos.y as usize].item = Some(item_type);
     }
 
-    let thistle_count = rng.random_range(0..=12);
+    let thistle_max = match config.depth {
+        0..=1 => 0,
+        2..=4 => 4,
+        _ => 12,
+    };
+    let thistle_count = rng.random_range(0..=thistle_max);
     for _ in 0..thistle_count {
         if open_cells.is_empty() {
             break;

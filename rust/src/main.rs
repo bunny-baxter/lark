@@ -153,9 +153,9 @@ impl TerminalApp {
                 let mut c = match actor.actor_type {
                     ActorType::Player => "@".light_yellow().on_black(),
                     ActorType::Toad => "t".light_green().on_black(),
-                    ActorType::MouseWarrior => "m".light_magenta().on_black(),
+                    ActorType::MouseWarrior => "m".light_cyan().on_black(),
                     ActorType::MouseSkirmisher => "m".magenta().on_black(),
-                    ActorType::ToothyStarling => "s".light_cyan().on_black(),
+                    ActorType::ToothyStarling => "s".cyan().on_black(),
                     ActorType::DustySkeleton => "z".white().on_black(),
                     ActorType::BlueJelly => "j".light_blue().on_black(),
                 };

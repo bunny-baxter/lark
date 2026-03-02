@@ -46,7 +46,7 @@ pub struct ActorBaseStats {
 
 const PLAYER_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 24,
-    attack_power: 1,
+    attack_power: 2,
     defense_power: 0,
 };
 
@@ -57,7 +57,7 @@ const TOAD_STATS: ActorBaseStats = ActorBaseStats {
 };
 
 const MOUSE_WARRIOR_STATS: ActorBaseStats = ActorBaseStats {
-    max_hp: 14,
+    max_hp: 16,
     attack_power: 5,
     defense_power: 2,
 };
@@ -76,7 +76,7 @@ const TOOTHY_STARLING_STATS: ActorBaseStats = ActorBaseStats {
 
 const DUSTY_SKELETON_STATS: ActorBaseStats = ActorBaseStats {
     max_hp: 9,
-    attack_power: 4,
+    attack_power: 5,
     defense_power: 1,
 };
 
@@ -149,7 +149,7 @@ const LUMP_OF_BLACKSTONE_DATA: ItemData = ItemData {
 
 const BLACKSTONE_SPEAR_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
-    attack_bonus: Some(2),
+    attack_bonus: Some(3),
     defense_bonus: None,
     max_hp_bonus: None,
     initial_wand_charges: None,
@@ -181,7 +181,7 @@ const WAND_OF_ICE_DATA: ItemData = ItemData {
 
 const CARMINE_SWORD_DATA: ItemData = ItemData {
     equip_slot: EquipSlot::Weapon,
-    attack_bonus: Some(3),
+    attack_bonus: Some(5),
     defense_bonus: None,
     max_hp_bonus: None,
     initial_wand_charges: None,
