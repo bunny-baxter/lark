@@ -297,7 +297,7 @@ impl TerminalApp {
                 self.direction_selection_item = Some(item_id);
                 self.item_menu = None;
             },
-            KeyCode::Esc => self.item_menu = None,
+            KeyCode::Esc | KeyCode::Char('i') => self.item_menu = None,
             _ => {}
         }
     }
@@ -480,7 +480,7 @@ impl Widget for &TerminalApp {
         } else if self.item_menu.is_some() {
             Line::from("arrow keys = select, 'd' = drop, 'w' = wear/wield, 'e' = eat,".dark_gray())
                 .render(Rect::new(0, reminder_y, 64, 1), buf);
-            Line::from("'v'/'t' = evoke/throw ".dark_gray())
+            Line::from("'v'/'t' = evoke/throw, esc = close".dark_gray())
                 .render(Rect::new(0, reminder_y + 1, 64, 1), buf);
         } else {
             Line::from("arrow keys = move, '.' = wait, 'g' = pick up, 'i' = inventory".dark_gray())
