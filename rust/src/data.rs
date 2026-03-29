@@ -263,4 +263,5 @@ pub enum GameEvent {
     ThrownStoneDamage { actor_id: u32, damage: i32 },
     JavelinDamage { actor_id: u32, damage: i32 },
     WandExpended { item_id: u32 },
+    ItemIsHere { item_id: u32 },
 }

@@ -128,5 +128,6 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::ThrownStoneDamage { actor_id, damage } => format!("\u{25cf}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::JavelinDamage { actor_id, damage } => format!("\u{2191}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::WandExpended { item_id } => format!("{} turns to dust", get_item_name(item_id, type_table)),
+        GameEvent::ItemIsHere { item_id } => format!("{} is here", get_item_name(item_id, type_table)),
     }
 }

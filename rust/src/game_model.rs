@@ -827,6 +827,10 @@ impl GameInstance {
                 let mut result = self.current_room.actor_walk(self.current_room.player_index, delta);
                 self.event_log.append(&mut result.events);
                 if result.succeeded {
+                    let player_pos = self.current_room.get_player().position;
+                    for i in self.current_room.find_loose_items_at(player_pos) {
+                        self.event_log.push(GameEvent::ItemIsHere { item_id: self.current_room.items[i].id });
+                    }
                     if self.current_room.exits.contains_key(&self.current_room.get_player().position) {
                         // Use the player's previous position as the next room start. Otherwise the
                         // player could be on the room edge, which is never valid.

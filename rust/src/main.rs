@@ -91,6 +91,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::ThrownStoneDamage { .. } => Color::Red,
             GameEvent::JavelinDamage { .. } => Color::Red,
             GameEvent::WandExpended { .. } => Color::DarkGray,
+            GameEvent::ItemIsHere { .. } => Color::Yellow,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
