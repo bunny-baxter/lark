@@ -25,6 +25,8 @@ use game_model::{Command, GameInstance};
 use strings::NamedType;
 use ui_common::ItemMenu;
 
+const MAIN_AREA_HEIGHT: u16 = 16;
+
 struct CellDisplay {
     c: char,
     fg_color: Color,
@@ -365,7 +367,7 @@ impl TerminalApp {
         Paragraph::new(map_text)
             .centered()
             .block(map_block)
-            .render(Rect::new(0, 0, 48, 18), buf);
+            .render(Rect::new(0, 0, 48, MAIN_AREA_HEIGHT), buf);
 
         let side_hud_block = Block::new()
             .padding(Padding::symmetric(2, 1));
@@ -377,7 +379,7 @@ impl TerminalApp {
         ];
         Paragraph::new(Text::from(side_hud_lines))
             .block(side_hud_block)
-            .render(Rect::new(48, 0, 16, 18), buf);
+            .render(Rect::new(48, 0, 16, MAIN_AREA_HEIGHT), buf);
     }
 
     fn render_item_menu(&self, buf: &mut Buffer, type_table: &HashMap<u32, NamedType>) {
@@ -411,12 +413,12 @@ impl TerminalApp {
         Paragraph::new(Text::from(lines_vec))
             .left_aligned()
             .block(menu_block)
-            .render(Rect::new(0, 0, 64, 18), buf);
+            .render(Rect::new(0, 0, 64, MAIN_AREA_HEIGHT), buf);
     }
 }
 
 impl Widget for &TerminalApp {
-    fn render(self, _area: Rect, buf: &mut Buffer) {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         let type_table = self.build_type_table();
 
         if self.item_menu.is_some() {
@@ -443,12 +445,23 @@ impl Widget for &TerminalApp {
             let event_block = Block::bordered()
                 .padding(Padding::horizontal(1))
                 .border_type(ratatui::widgets::BorderType::Thick);
-            // TODO: Handle the case where we have more than 8 unread lines. Right now this will just truncate them.
-            let height = (2 + lines.len().min(8)) as u16;
+            // TODO: Handle the case where we have more than 7 unread lines. Right now this will just truncate them.
+            let height = (2 + lines.len().min(7)) as u16;
             Paragraph::new(Text::from(lines))
                 .left_aligned()
                 .block(event_block)
-                .render(Rect::new(0, 18, 64, height), buf);
+                .render(Rect::new(0, MAIN_AREA_HEIGHT, 64, height), buf);
+        }
+
+        let reminder_y = area.height - 2;
+        if self.item_menu.is_some() {
+            Line::from("arrow keys = select, 'd' = drop, 'w' = wear/wield, 'e' = eat,".dark_gray())
+                .render(Rect::new(0, reminder_y, 64, 1), buf);
+            Line::from("'v'/'t' = evoke/throw ".dark_gray())
+                .render(Rect::new(0, reminder_y + 1, 64, 1), buf);
+        } else {
+            Line::from("arrow keys = move, '.' = wait, 'g' = pick up, 'i' = inventory ".dark_gray())
+                .render(Rect::new(0, reminder_y, 64, 1), buf);
         }
     }
 }
