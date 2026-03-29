@@ -108,6 +108,7 @@ pub struct MiscEntity {
 #[derive(Debug)]
 pub struct Room {
     pub size: TileSize,
+    pub depth: i32,
     pub cells: Vec<Vec<Cell>>,
     pub actors: Vec<Actor>,
     pub items: Vec<Item>,
@@ -127,13 +128,14 @@ struct WalkResult {
 }
 
 impl Room {
-    fn new(size: TileSize) -> Self {
+    fn new(size: TileSize, depth: i32) -> Self {
         let mut cells = Vec::with_capacity(size.x);
         for _i in 0..size.x {
             cells.push(vec![ Cell::default() ; size.y ]);
         }
         Room {
             size,
+            depth,
             cells,
             actors: vec![],
             items: vec![],
@@ -149,7 +151,7 @@ impl Room {
     }
 
     fn generate(player_start: Option<TilePoint>, config: RoomGenerationConfig) -> Self {
-        let mut room = Self::new(config.size);
+        let mut room = Self::new(config.size, config.depth);
         let gen_result = generate::generate_room(player_start, config.clone());
         for x in 0..config.size.x { for y in 0..config.size.y {
             let pos = vec2(x as i32, y as i32);
@@ -749,7 +751,7 @@ impl Room {
 }
 
 fn create_blank_room(size: TileSize) -> Room {
-    let mut room = Room::new(size);
+    let mut room = Room::new(size, 0);
     for x in 0..size.x {
         for y in 0..size.y {
             if x == 0 || y == 0 || x as usize == size.x - 1 || y as usize == size.y - 1 {
@@ -910,7 +912,7 @@ mod tests {
 
     #[test]
     fn test_create_room() {
-        let room = Room::new(vec2(4, 5));
+        let room = Room::new(vec2(4, 5), 0);
         assert_eq!(room.size, TileSize::new(4, 5));
         assert_eq!(room.cells.len(), 4);
         assert_eq!(room.cells[0].len(), 5);
@@ -919,7 +921,7 @@ mod tests {
 
     #[test]
     fn test_create_actors() {
-        let mut room = Room::new(vec2(4, 5));
+        let mut room = Room::new(vec2(4, 5), 0);
         room.create_actor(ActorType::Toad, vec2(0, 0));
         room.create_player(vec2(1, 0));
         assert_eq!(room.actors.len(), 2);

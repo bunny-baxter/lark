@@ -374,6 +374,8 @@ impl TerminalApp {
             .padding(Padding::symmetric(2, 1));
         let player_ref = self.game.current_room.get_player();
         let side_hud_lines = vec![
+            Line::from(format!("Depth {}", self.game.current_room.depth + 1)),
+            Line::from(""),
             Line::from(format!("Health {}/{}", player_ref.current_hp, player_ref.max_hp)),
             Line::from(format!("Attack {}", player_ref.attack_power)),
             Line::from(format!("Defense {}", player_ref.defense_power)),
