@@ -92,6 +92,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::JavelinDamage { .. } => Color::Red,
             GameEvent::WandExpended { .. } => Color::DarkGray,
             GameEvent::ItemIsHere { .. } => Color::Yellow,
+            GameEvent::Winner => Color::Magenta,
         };
         let parts = vec![
             Span::styled("=> ", Style::default().fg(color)),
@@ -107,7 +108,6 @@ pub struct TerminalApp {
     item_menu: Option<ItemMenu>,
     direction_selection_item: Option<u32>,
     exit: bool,
-    game_over: bool,
 }
 
 impl TerminalApp {
@@ -125,7 +125,6 @@ impl TerminalApp {
             item_menu: None,
             direction_selection_item: None,
             exit: false,
-            game_over: false,
         }
     }
 
@@ -336,14 +335,13 @@ impl TerminalApp {
                 self.unread_event_index = 0;
                 self.item_menu = None;
                 self.direction_selection_item = None;
-                self.game_over = false;
             },
             _ => {}
         }
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        if self.game_over {
+        if self.game.game_over {
             self.handle_key_game_over(key_event.code);
         } else if self.item_menu.is_some() {
             self.handle_key_item_menu(key_event.code);
@@ -365,9 +363,6 @@ impl TerminalApp {
         };
         if self.game.turn > turn {
             self.unread_event_index = event_log_len;
-        }
-        if self.game.current_room.get_player().is_dead {
-            self.game_over = true;
         }
         Ok(())
     }
@@ -479,7 +474,7 @@ impl Widget for &TerminalApp {
         }
 
         let reminder_y = area.height - 2;
-        if self.game_over {
+        if self.game.game_over {
             Line::from("'q' = quit, 'r' = restart".dark_gray())
                 .render(Rect::new(0, reminder_y, 64, 1), buf);
         } else if self.item_menu.is_some() {

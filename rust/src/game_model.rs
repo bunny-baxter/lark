@@ -780,6 +780,7 @@ pub struct GameInstance {
     pub turn: u32,
     pub current_room: Room,
     pub event_log: Vec<GameEvent>,
+    pub game_over: bool,
 }
 
 impl GameInstance {
@@ -793,6 +794,7 @@ impl GameInstance {
                 room
             },
             event_log: vec![],
+            game_over: false,
         }
     }
 
@@ -808,6 +810,11 @@ impl GameInstance {
 
         let mut config = config.clone();
         config.depth += 1;
+        if config.depth >= 16 {
+            self.event_log.push(GameEvent::Winner);
+            self.game_over = true;
+            return;
+        }
         let mut new_room = Room::generate(Some(player_start), config);
 
         new_room.clone_actor(self.current_room.get_player());
@@ -890,6 +897,10 @@ impl GameInstance {
                 self.event_log.append(&mut self.current_room.update_misc_entity(i));
             }
             self.turn += 1;
+            if self.current_room.get_player().is_dead {
+                self.game_over = true;
+                return;
+            }
             if self.current_room.get_player().skip_next_turn {
                 self.current_room.get_player_mut().skip_next_turn = false;
                 self.execute_command(Command::Wait);
