@@ -980,8 +980,8 @@ mod tests {
         assert!(game.current_room.get_player().current_hp < player_max_hp);
         assert!(game.current_room.get_actor(monster_id).current_hp < monster_max_hp);
         assert_eq!(vec![
-            GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 2 },
-            GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 2 },
+            GameEvent::MeleeAttack { attacker_id: player_id, defender_id: monster_id, damage: 3 },
+            GameEvent::MeleeAttack { attacker_id: monster_id, defender_id: player_id, damage: 3 },
         ], game.event_log);
     }
 
@@ -1039,12 +1039,14 @@ mod tests {
         let item_id = {
             let room = &mut game.current_room;
             room.create_player(vec2(1, 1));
-            let item_id = room.create_item(ItemType::LumpOfBlackstone, vec2(1, 1));
+            let item_id = room.create_item(ItemType::LumpOfBlackstone, vec2(2, 1));
             item_id
         };
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
         game.execute_command(Command::GetItem { item_id });
         game.execute_command(Command::DropItem { item_id });
         assert_eq!(vec![
+            GameEvent::ItemIsHere { item_id },
             GameEvent::GotItem { item_id },
             GameEvent::DroppedItem { item_id },
         ], game.event_log);
@@ -1135,7 +1137,7 @@ mod tests {
         };
         game.execute_command(Command::GetItem { item_id });
         game.execute_command(Command::EatItem { item_id });
-        assert_eq!(game.current_room.get_player().max_hp, game.current_room.get_player().current_hp);
+        assert_eq!(17, game.current_room.get_player().current_hp);
         assert_eq!(0, game.current_room.player_inventory.len());
         assert_eq!(0, game.current_room.find_loose_items_at(vec2(1, 1)).len());
         assert_eq!(vec![
