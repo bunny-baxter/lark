@@ -34,6 +34,8 @@ pub fn item_type_to_name(item_type: ItemType) -> &'static str {
         ItemType::CarmineHelm => "carmine helm",
         ItemType::CarmineChainmail => "carmine chainmail",
         ItemType::Bloodflower => "bloodflower",
+        ItemType::ElephantFrond => "elephant frond",
+        ItemType::ArmadilloFlower => "armadillo flower",
         ItemType::WandOfIce => "wand of ice",
     }
 }
@@ -129,6 +131,8 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::JavelinDamage { actor_id, damage } => format!("\u{2191}{} {}", damage, get_actor_name(actor_id, player_name, type_table)),
         GameEvent::WandExpended { item_id } => format!("{} turns to dust", get_item_name(item_id, type_table)),
         GameEvent::ItemIsHere { item_id } => format!("{} is here", get_item_name(item_id, type_table)),
+        GameEvent::EffectStronger { actor_id } => format!("{} feels stronger", get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::EffectTougher { actor_id } => format!("{} feels tougher", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::Winner => "winner [end of playtest]".to_string(),
     }
 }

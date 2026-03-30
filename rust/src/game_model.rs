@@ -678,6 +678,17 @@ impl Room {
                 events.push(GameEvent::EffectHealed { actor_id: self.get_player().id });
                 self.destroy_item(item_id);
             },
+            ItemType::ElephantFrond => {
+                self.get_player_mut().attack_power += 1;
+                events.push(GameEvent::EffectStronger { actor_id: self.get_player().id });
+                self.destroy_item(item_id);
+            },
+            ItemType::ArmadilloFlower => {
+                self.get_player_mut().max_hp += 2;
+                self.get_player_mut().current_hp += 2;
+                events.push(GameEvent::EffectTougher { actor_id: self.get_player().id });
+                self.destroy_item(item_id);
+            },
             _ => return vec![ GameEvent::ItemNotEdible { item_id } ],
         };
         events

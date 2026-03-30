@@ -65,8 +65,8 @@ fn init_test_level(game: &mut GameInstance) {
     game.current_room.create_item(ItemType::Bloodflower, vec2(1, 3));
     game.current_room.create_item(ItemType::Bloodflower, vec2(2, 3));
     game.current_room.create_item(ItemType::Bloodflower, vec2(3, 3));
-    game.current_room.create_item(ItemType::Bloodflower, vec2(4, 3));
-    game.current_room.create_item(ItemType::Bloodflower, vec2(5, 3));
+    game.current_room.create_item(ItemType::ElephantFrond, vec2(4, 3));
+    game.current_room.create_item(ItemType::ArmadilloFlower, vec2(5, 3));
 }
 
 fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b HashMap<u32, NamedType>) -> Vec<Line<'c>> {
@@ -92,6 +92,8 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::JavelinDamage { .. } => Color::Red,
             GameEvent::WandExpended { .. } => Color::DarkGray,
             GameEvent::ItemIsHere { .. } => Color::Yellow,
+            GameEvent::EffectStronger { .. } => Color::LightGreen,
+            GameEvent::EffectTougher { .. } => Color::LightGreen,
             GameEvent::Winner => Color::Magenta,
         };
         let parts = vec![
@@ -187,6 +189,8 @@ impl TerminalApp {
                     ItemType::CarmineHelm => "^".red().on_black(),
                     ItemType::CarmineChainmail => "[".red().on_black(),
                     ItemType::Bloodflower => "%".light_red().on_black(),
+                    ItemType::ElephantFrond => "%".light_green().on_black(),
+                    ItemType::ArmadilloFlower => "%".light_yellow().on_black(),
                     ItemType::WandOfIce => "/".light_cyan().on_black(),
                 };
             }

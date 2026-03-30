@@ -114,6 +114,8 @@ pub enum ItemType {
     //ViridianHelm,
     FeatheredCavalier,
     Bloodflower,
+    ElephantFrond,
+    ArmadilloFlower,
     //Azureberry,
     //Indigoberry,
     //PoulticeOfPurple,
@@ -219,6 +221,22 @@ const CARMINE_HELM_DATA: ItemData = ItemData {
     initial_wand_charges: None,
 };
 
+const ELEPHANT_FROND_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Headgear,
+    attack_bonus: None,
+    defense_bonus: None,
+    max_hp_bonus: None,
+    initial_wand_charges: None,
+};
+
+const ARMADILLO_FLOWER_DATA: ItemData = ItemData {
+    equip_slot: EquipSlot::Headgear,
+    attack_bonus: None,
+    defense_bonus: None,
+    max_hp_bonus: None,
+    initial_wand_charges: None,
+};
+
 pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
     match item_type {
         ItemType::LumpOfBlackstone => &LUMP_OF_BLACKSTONE_DATA,
@@ -230,6 +248,8 @@ pub fn get_item_data(item_type: ItemType) -> &'static ItemData {
         ItemType::CarmineHelm => &CARMINE_HELM_DATA,
         ItemType::CarmineChainmail => &CARMINE_CHAINMAIL_DATA,
         ItemType::Bloodflower => &BLOODFLOWER_DATA,
+        ItemType::ElephantFrond => &ELEPHANT_FROND_DATA,
+        ItemType::ArmadilloFlower => &ARMADILLO_FLOWER_DATA,
         ItemType::WandOfIce => &WAND_OF_ICE_DATA,
     }
 }
@@ -264,5 +284,7 @@ pub enum GameEvent {
     JavelinDamage { actor_id: u32, damage: i32 },
     WandExpended { item_id: u32 },
     ItemIsHere { item_id: u32 },
+    EffectStronger { actor_id: u32 },
+    EffectTougher { actor_id: u32 },
     Winner,
 }

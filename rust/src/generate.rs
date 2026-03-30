@@ -279,6 +279,8 @@ fn roll_treasure(depth: i32) -> Vec<ItemType> {
         ItemType::Bloodflower,
         ItemType::Bloodflower,
         ItemType::Bloodflower,
+        ItemType::ElephantFrond,
+        ItemType::ArmadilloFlower,
         ItemType::WandOfIce,
         ItemType::WandOfIce,
         ItemType::WandOfIce,
