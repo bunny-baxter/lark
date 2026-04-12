@@ -94,6 +94,7 @@ fn create_lines_for_events<'a, 'b, 'c>(events: &'a [GameEvent], type_table: &'b 
             GameEvent::ItemIsHere { .. } => Color::Yellow,
             GameEvent::EffectStronger { .. } => Color::LightGreen,
             GameEvent::EffectTougher { .. } => Color::LightGreen,
+            GameEvent::UsedHealingFont { .. } => Color::LightGreen,
             GameEvent::Winner => Color::Magenta,
         };
         let parts = vec![
@@ -208,6 +209,10 @@ impl TerminalApp {
                         _ => unreachable!(),
                     },
                     MiscEntityType::TreasureChest => "=".yellow().on_black(),
+                    MiscEntityType::HealingFont => match entity.data {
+                        0 => "=".light_green().on_black(),
+                        _ => "=".dark_gray().on_black(),
+                    },
                 };
             }
         }

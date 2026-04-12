@@ -580,6 +580,18 @@ impl Room {
             self.actors[actor_index].skip_next_turn = true;
             events.push(GameEvent::SlowedByWater { actor_id: self.actors[actor_index].id });
         }
+        if actor_index == self.player_index {
+            for entity_index in self.find_misc_entities_at(new_position) {
+                if self.misc_entities[entity_index].entity_type == MiscEntityType::HealingFont
+                    && self.misc_entities[entity_index].data == 0
+                {
+                    let max_hp = self.actors[actor_index].max_hp;
+                    self.modify_hp(actor_index, max_hp);
+                    self.misc_entities[entity_index].data = 1;
+                    events.push(GameEvent::UsedHealingFont { actor_id: self.actors[actor_index].id });
+                }
+            }
+        }
         events
     }
 
@@ -1212,6 +1224,31 @@ mod tests {
             GameEvent::SlowedByWater { actor_id: player_id },
             GameEvent::SlowedByWater { actor_id: player_id },
         ], game.event_log);
+    }
+
+    #[test]
+    fn test_healing_font() {
+        let mut game = GameInstance::new();
+        {
+            let room = &mut game.current_room;
+            room.create_player(vec2(1, 1));
+            room.get_player_mut().current_hp = 1;
+            room.create_misc_entity(MiscEntityType::HealingFont, vec2(2, 1));
+        }
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        let player = game.current_room.get_player();
+        assert_eq!(player.max_hp, player.current_hp);
+        let entity_index = game.current_room.find_misc_entities_at(vec2(2, 1))[0];
+        assert_eq!(1, game.current_room.misc_entities[entity_index].data);
+        assert_eq!(vec![
+            GameEvent::UsedHealingFont { actor_id: game.current_room.get_player().id },
+        ], game.event_log);
+
+        // Stepping off and back does not heal again.
+        game.current_room.get_player_mut().current_hp = 1;
+        game.execute_command(Command::Walk { delta: vec2(-1, 0) });
+        game.execute_command(Command::Walk { delta: vec2(1, 0) });
+        assert_eq!(1, game.current_room.get_player().current_hp);
     }
 
     #[test]

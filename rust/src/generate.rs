@@ -428,6 +428,12 @@ pub fn generate_room(maybe_player_start: Option<TilePoint>, config: RoomGenerati
         room[pos.x as usize][pos.y as usize].misc_entity = Some(MiscEntityType::SteelThistle);
     }
 
+    if config.depth % 2 == 1 && !open_cells.is_empty() {
+        let i = rng.random_range(0..open_cells.len());
+        let pos = open_cells.swap_remove(i);
+        room[pos.x as usize][pos.y as usize].misc_entity = Some(MiscEntityType::HealingFont);
+    }
+
     GeneratedRoom {
         cells: room,
         exits,

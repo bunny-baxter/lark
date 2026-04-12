@@ -133,6 +133,7 @@ pub fn get_string(event: GameEvent, player_name: &str, type_table: &HashMap<u32,
         GameEvent::ItemIsHere { item_id } => format!("{} is here", get_item_name(item_id, type_table)),
         GameEvent::EffectStronger { actor_id } => format!("{} feels stronger", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::EffectTougher { actor_id } => format!("{} feels tougher", get_actor_name(actor_id, player_name, type_table)),
+        GameEvent::UsedHealingFont { actor_id } => format!("{} is washed by healing waters", get_actor_name(actor_id, player_name, type_table)),
         GameEvent::Winner => "winner [end of playtest]".to_string(),
     }
 }

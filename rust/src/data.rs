@@ -261,6 +261,7 @@ pub const STEEL_THISTLE_CYCLE_MAX: i32 = 4;
 pub enum MiscEntityType {
     SteelThistle,
     TreasureChest,
+    HealingFont,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -286,5 +287,6 @@ pub enum GameEvent {
     ItemIsHere { item_id: u32 },
     EffectStronger { actor_id: u32 },
     EffectTougher { actor_id: u32 },
+    UsedHealingFont { actor_id: u32 },
     Winner,
 }
